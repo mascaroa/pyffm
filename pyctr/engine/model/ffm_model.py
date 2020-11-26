@@ -37,4 +37,4 @@ class FFMModel(BaseModel):
         return phi
 
     def predict(self, x):
-        return self._phi(x)
+        return logistic(self._phi(x))
