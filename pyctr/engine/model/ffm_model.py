@@ -3,10 +3,11 @@ from typing import Tuple, List
 import numpy as np
 
 from pyctr.engine.model import BaseModel
+from pyctr.util import logistic
 
 
 class FFMModel(BaseModel):
-    def __init__(self, num_latent, num_features, num_fields, reg_lambda, linear_terms=False):
+    def __init__(self, num_latent, num_features, num_fields, reg_lambda, linear_terms=True):
         super().__init__(num_latent=num_latent, num_features=num_features, num_fields=num_fields, reg_lambda=reg_lambda)
         self.linear_terms = linear_terms
 
@@ -29,10 +30,10 @@ class FFMModel(BaseModel):
         if self.linear_terms:
             phi += self.bias
             for lin_term in self.lin_terms:
-                phi += 1 / np.sqrt(2) * lin_term
+                phi += (1 / np.sqrt(2)) * lin_term
         combos = itertools.combinations(x, r=2)
         for ((field1, feat1, val1), (field2, feat2, val2)) in combos:
-            phi += 1 / np.sqrt(2) * np.dot(self.latent_w[field2, feat1], self.latent_w[field1, feat2]) * val1 * val2
+            phi += (1 / 2) * np.dot(self.latent_w[field2, feat1], self.latent_w[field1, feat2]) * val1 * val2
         return phi
 
     def predict(self, x):

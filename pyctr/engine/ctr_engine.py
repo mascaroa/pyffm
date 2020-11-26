@@ -9,7 +9,6 @@ MODEL_DICT = {'ffm': FFMModel,
               'fm': FMModel,
               'poly2': Poly2Model}
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel('INFO')
 
@@ -35,8 +34,8 @@ class CTREngine:
         :return:
         """
         if self.model is None:
-            num_features = len(set([val[0] for row in x_data for val in row[1:]]))
-            num_fields = len(set([val[1] for row in x_data for val in row[1:]]))
+            num_features = max([val[0] for row in x_data for val in row[1:]]) + 1
+            num_fields = max([val[1] for row in x_data for val in row[1:]]) + 1
             self.create_model(num_latent=4, num_features=num_features, num_fields=num_fields, reg_lambda=0.01)
         if not isinstance(x_data, list):
             raise TypeError('x data must be a list data rows!')
@@ -44,10 +43,12 @@ class CTREngine:
             x_data = [x_data]
         for epoch in range(self.epochs):
             logger.info(f'Epoch {epoch}')
-            for l, x_line in enumerate(x_data):
-                y = x_line[0]
-                self.model.calc_kappa(x_line[1:], y)
+            sample_line = np.random.randint(0, len(x_data) - 1)
+            self.model.calc_kappa(x_data[sample_line][1:], x_data[sample_line][0])
+            for x_line in x_data:
                 for i, x_1 in enumerate(x_line[1:]):
+                    if x_1[2] == 0:
+                        continue  # Only calculate non-zero valued terms
                     for j, x_2 in enumerate(x_line[i + 1:]):
                         g1, g2 = self.model.calc_subgrads(x_1, x_2)
                         self.model.grads[x_1[0], x_2[1]] += g1 ** 2
