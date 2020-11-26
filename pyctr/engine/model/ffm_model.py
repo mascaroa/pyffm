@@ -14,9 +14,12 @@ class FFMModel(BaseModel):
         self.kappa = np.divide(-y, (1 + np.exp(y * self._phi(x))))
 
     def calc_subgrads(self, x_1, x_2) -> (float, float):
-        g1 = self.subgrad(self.kappa, *x_1, *x_2)
-        g2 = self.subgrad(self.kappa, *x_2, *x_1)
+        g1 = self._subgrad(self.kappa, *x_1, *x_2)
+        g2 = self._subgrad(self.kappa, *x_2, *x_1)
         return g1, g2
+
+    def _subgrad(self, kappa, j1, f1, x1, j2, f2, x2):
+        return self.reg_lambda * self.latent_w[j1, f2] + kappa * self.latent_w[j2, f1] * x1 * x2
 
     def _phi(self, x: List[Tuple[int, int, float]]):
         """
@@ -31,3 +34,6 @@ class FFMModel(BaseModel):
         for ((field1, feat1, val1), (field2, feat2, val2)) in combos:
             phi += 1 / np.sqrt(2) * np.dot(self.latent_w[field2, feat1], self.latent_w[field1, feat2]) * val1 * val2
         return phi
+
+    def predict(self, x):
+        return self._phi(x)
