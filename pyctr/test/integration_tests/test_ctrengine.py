@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-import pandas as pd
+
 
 from pyctr.engine.ctr_engine import CTREngine
 
@@ -30,4 +30,20 @@ class TestCTREngine(unittest.TestCase):
                 features = [(int(val.split(':')[0]), int(val.split(':')[1]), float(val.split(':')[2])) for val in line.replace('\n', '').split(' ')[1:]]
                 data_in.append(click + features)
         self.ctr_engine.train(data_in)
-        self.ctr_engine.predict(data_in[0][1:])
+        c_m = [[0, 0], [0, 0]]
+        all_pos = 0
+        for row in data_in:
+            pred = self.ctr_engine.predict(row[1:])
+            if row[0] == 1 and row[0] == np.round(pred):
+                c_m[0][0] += 1
+            elif row[0] == 0 and row[0] == np.round(pred):
+                c_m[1][1] += 1
+            elif row[0] == 1 and row[0] != np.round(pred):
+                c_m[1][0] += 1
+            elif row[0] == 0 and row[0] != np.round(pred):
+                c_m[0][1] += 1
+            if row[0] == 1:
+                all_pos += 1
+            print(f'{row[0]} - {int(np.round(pred))}')
+        print(f' {c_m[0][0]} | {c_m[0][1]} \n---------- \n  {c_m[1][0]} | {c_m[1][1]}')
+        pass
