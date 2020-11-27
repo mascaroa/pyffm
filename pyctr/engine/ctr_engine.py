@@ -18,7 +18,7 @@ class CTREngine:
         self.model_type = model
         self.model = None
         self.epochs = training_params.get('epochs', 100)
-        self.learn_rate = training_params.get('learn_rate', 0.001)
+        self.learn_rate = training_params.get('learn_rate', 0.2)
 
     def create_model(self, *args, **kwargs):
         # TODO: figure out params that go in the model vs. in here
@@ -34,9 +34,9 @@ class CTREngine:
         :return:
         """
         if self.model is None:
-            num_features = max([val[0] for row in x_data for val in row[1:]]) + 1
-            num_fields = max([val[1] for row in x_data for val in row[1:]]) + 1
-            self.create_model(num_latent=4, num_features=num_features, num_fields=num_fields, reg_lambda=0.01)
+            num_fields = max([val[0] for row in x_data for val in row[1:]]) + 1
+            num_features = max([val[1] for row in x_data for val in row[1:]]) + 1
+            self.create_model(num_latent=8, num_features=num_features, num_fields=num_fields, reg_lambda=0.01)
         if not isinstance(x_data, list):
             raise TypeError('x data must be a list data rows!')
         if isinstance(x_data[0], int) or isinstance(x_data[0], tuple):
@@ -46,6 +46,10 @@ class CTREngine:
             sample_line = np.random.randint(0, len(x_data) - 1)
             self.model.calc_kappa(x_data[sample_line][1:], x_data[sample_line][0])
             for x_line in x_data:
+                if self.model.use_linear:
+                    for x_1 in x_line[1:]:
+                        gl = self.model.calc_lin_subgrads(x_1)
+                        self.model.lin_terms[x_1[1]] -= self.learn_rate * gl
                 for i, x_1 in enumerate(x_line[1:]):
                     if x_1[2] == 0:
                         continue  # Only calculate non-zero valued terms
@@ -56,6 +60,7 @@ class CTREngine:
 
                         self.model.latent_w[x_1[0], x_2[1]] -= self.learn_rate * g1 / np.sqrt(self.model.grads[x_1[0], x_2[1]])
                         self.model.latent_w[x_2[0], x_1[1]] -= self.learn_rate * g1 / np.sqrt(self.model.grads[x_2[0], x_1[1]])
+            self.model.bias -= self.model.kappa * self.learn_rate
 
     def predict(self, x):
         return self.model.predict(x)

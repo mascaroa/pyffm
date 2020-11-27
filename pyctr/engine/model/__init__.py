@@ -5,11 +5,11 @@ import numpy as np
 class BaseModel(ABC):
     def __init__(self, num_latent, num_features, num_fields, reg_lambda):
         self.reg_lambda = reg_lambda
-        self.bias = 1
+        self.bias = 0
 
-        self.lin_terms = np.ones(num_features)
-        self.latent_w = np.random.rand(num_features, num_fields, num_latent) * 1/np.sqrt(num_latent)
-        self.grads = np.ones((num_features, num_fields, num_latent))
+        self.lin_terms = np.zeros(num_features)
+        self.latent_w = np.random.rand(num_fields, num_features, num_latent) * 1/np.sqrt(num_latent)
+        self.grads = np.ones((num_fields, num_features, num_latent))
 
         self.square_grad = 0
         self.kappa = 0
