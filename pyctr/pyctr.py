@@ -29,8 +29,9 @@ class PyCTR:
         self.predict_from_file = io_params.get('train_from_file', False)
         model = 'FFM' if model is None else model
 
-        name_error_string = f'Model {model.lower()} not found! Must be in {ENGINE_DICT.keys()}'
-        self.engine = ENGINE_DICT.get(model.lower(), exception_func)(training_params=training_params, io_params=io_params)
+        exception_inputs = {False: {'exception': 'NameError', 'msg': f'Model {model.lower()} not found! Must be in {ENGINE_DICT.keys()}'}}
+        self.engine = ENGINE_DICT.get(model.lower(), exception_func)
+        self.engine(**exception_inputs.get(model.lower() in ENGINE_DICT, {'training_params': training_params, 'io_params': io_params}))
 
     def train(self, data_in: Union[str, list, pd.DataFrame]):
         self._check_inputs(data_in)
@@ -72,7 +73,7 @@ class PyCTR:
     def _format_file_data(self, filename: str) -> list:
         # TODO: Map features and fields!
         data_in = []
-        with open('small_train.txt', 'r') as f:
+        with open(filename, 'r') as f:
             while True:
                 line = f.readline()
                 if not line:
@@ -84,7 +85,7 @@ class PyCTR:
 
 
 if __name__ == '__main__':
-    pyctr = PyCTR(model='ffm')
+    pyctr = PyCTR(model="ffm")
     import os
 
     dir = os.getcwd()

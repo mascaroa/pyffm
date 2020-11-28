@@ -60,3 +60,4 @@ class FFMEngine(BaseEngine):
 
     def predict(self, x):
         return self.model.predict(x)
+
