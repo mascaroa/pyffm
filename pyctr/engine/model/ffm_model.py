@@ -41,8 +41,8 @@ class FFMModel(BaseModel):
         phi = 0
         if self.use_linear:
             phi += self.bias
-            for lin_term in self.lin_terms:
-                phi += (1 / np.sqrt(len(self.lin_terms))) * lin_term
+            for feat in [val[0] for val in x]:
+                phi += (1 / np.sqrt(2)) * self.lin_terms[feat]
         for ((field1, feat1, val1), (field2, feat2, val2)) in it.combinations(x, r=2):
             phi += (1 / 2) * np.dot(self.latent_w[field2, feat1], self.latent_w[field1, feat2]) * val1 * val2
         return phi
