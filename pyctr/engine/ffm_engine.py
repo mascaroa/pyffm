@@ -1,30 +1,21 @@
 import numpy as np
 import logging
 
-from pyctr.engine import BaseEngine
+from . import BaseEngine
 
-from pyctr.engine.model.ffm_model import FFMModel
-from pyctr.engine.model.fm_model import FMModel
-from pyctr.engine.model.poly2_model import Poly2Model
-
-MODEL_DICT = {'ffm': FFMModel,
-              'fm': FMModel,
-              'poly2': Poly2Model}
+from .model.ffm_model import FFMModel
 
 logger = logging.getLogger(__name__)
 
 
-class CTREngine(BaseEngine):
-    def __init__(self, model, training_params, io_params):
-        self.model_type = model
-        self.model = None
-        self.epochs = training_params.get('epochs', 100)
-        self.learn_rate = training_params.get('learn_rate', 0.2)
+class FFMEngine(BaseEngine):
+    def __init__(self, training_params, io_params):
+        super().__init__(training_params, io_params)
 
     def create_model(self, *args, **kwargs):
         # TODO: figure out params that go in the model vs. in here
         # Size of model, (num fields, num feats etc.?)
-        self.model = MODEL_DICT[self.model_type](*args, **kwargs)
+        self.model = FFMModel(*args, **kwargs)
 
     def train(self, x_data: list) -> int:
         """
