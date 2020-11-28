@@ -37,7 +37,7 @@ class FFMEngine(BaseEngine):
         for epoch in range(self.epochs):
             logger.info(f'Epoch {epoch}')
             sample_line = np.random.randint(0, len(x_data) - 1)
-            self.model.calc_kappa(x_data[sample_line][1:], x_data[sample_line][0])
+            self.model.kappa = (x_data[sample_line][1:], x_data[sample_line][0])
             for x_line in x_data:
                 assert x_line[0] in [0, 1], f'Click must be 0 or 1, not {x_line[0]}!'
                 if self.model.use_linear:

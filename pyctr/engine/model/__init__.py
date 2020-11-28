@@ -17,10 +17,6 @@ class BaseModel(ABC):
         self.kappa = 0
 
     @abstractmethod
-    def calc_kappa(self, x, y):
-        pass
-
-    @abstractmethod
     def _subgrad(self, kappa, j1, f1, x1, j2, f2, x2):
         pass
 
