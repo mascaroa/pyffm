@@ -1,6 +1,8 @@
 import numpy as np
 import logging
 
+from pyctr.engine import BaseEngine
+
 from pyctr.engine.model.ffm_model import FFMModel
 from pyctr.engine.model.fm_model import FMModel
 from pyctr.engine.model.poly2_model import Poly2Model
@@ -10,10 +12,9 @@ MODEL_DICT = {'ffm': FFMModel,
               'poly2': Poly2Model}
 
 logger = logging.getLogger(__name__)
-logger.setLevel('INFO')
 
 
-class CTREngine:
+class CTREngine(BaseEngine):
     def __init__(self, model, training_params, io_params):
         self.model_type = model
         self.model = None
@@ -25,11 +26,12 @@ class CTREngine:
         # Size of model, (num fields, num feats etc.?)
         self.model = MODEL_DICT[self.model_type](*args, **kwargs)
 
-    def train(self, x_data: list):
+    def train(self, x_data: list) -> int:
         """
 
-        :param x_data: Training data formatted as a list of lists (rows) like:
-                        [[click, (feat1, field1, val1), (feat2, field2, val2), ...], [...]]
+        :param x_data: Training data formatted as a list of lists of tuples (rows) like:
+                        [[click, (feat1, field1, val1), (feat2, field2, val2), ...],
+                        [click, (...), ...]]
                         where click = 0 or 1; featN, fieldN are ints and valN are ints or floats
         :return:
         """
@@ -46,11 +48,13 @@ class CTREngine:
             sample_line = np.random.randint(0, len(x_data) - 1)
             self.model.calc_kappa(x_data[sample_line][1:], x_data[sample_line][0])
             for x_line in x_data:
+                assert x_line[0] in [0, 1], f'Click must be 0 or 1, not {x_line[0]}!'
                 if self.model.use_linear:
                     for x_1 in x_line[1:]:
                         gl = self.model.calc_lin_subgrads(x_1)
                         self.model.lin_terms[x_1[1]] -= self.learn_rate * gl
                 for i, x_1 in enumerate(x_line[1:]):
+                    assert len(x_1) == 3, f'x must be a tuple like (field, feat, val) not {x_1}!'
                     if x_1[2] == 0:
                         continue  # Only calculate non-zero valued terms
                     for j, x_2 in enumerate(x_line[i + 1:]):
@@ -61,6 +65,7 @@ class CTREngine:
                         self.model.latent_w[x_1[0], x_2[1]] -= self.learn_rate * g1 / np.sqrt(self.model.grads[x_1[0], x_2[1]])
                         self.model.latent_w[x_2[0], x_1[1]] -= self.learn_rate * g1 / np.sqrt(self.model.grads[x_2[0], x_1[1]])
             self.model.bias -= self.model.kappa * self.learn_rate
+        return 0
 
     def predict(self, x):
         return self.model.predict(x)
