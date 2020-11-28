@@ -1,4 +1,4 @@
-from pyctr.engine.model import BaseModel
+from . import BaseModel
 
 
 class FMModel(BaseModel):

@@ -2,14 +2,13 @@ import itertools as it
 from typing import Tuple, List
 import numpy as np
 
-from pyctr.engine.model import BaseModel
-from pyctr.util import logistic
+from . import BaseModel
+from util import logistic
 
 
 class FFMModel(BaseModel):
     def __init__(self, num_latent, num_features, num_fields, reg_lambda, use_linear=True):
-        super().__init__(num_latent=num_latent, num_features=num_features, num_fields=num_fields, reg_lambda=reg_lambda)
-        self.use_linear = use_linear
+        super().__init__(num_latent=num_latent, num_features=num_features, num_fields=num_fields, reg_lambda=reg_lambda, use_linear=use_linear)
 
     def calc_kappa(self, x, y):
         self.kappa = np.divide(-y, (1 + np.exp(y * self._phi(x))))
