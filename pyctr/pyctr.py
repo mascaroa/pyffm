@@ -6,8 +6,6 @@ from engine.ffm_engine import FFMEngine
 from engine.fm_engine import FMEngine
 from engine.poly2_engine import Poly2Engine
 
-from util import exception_func
-
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,9 +29,9 @@ class PyCTR:
         self.predict_from_file = io_params.get('train_from_file', False)
         model = 'FFM' if model is None else model
 
-        exception_inputs = {False: {'exception': 'NameError', 'msg': f'Model {model.lower()} not found! Must be in {ENGINE_DICT.keys()}'}}
-        self.engine = ENGINE_DICT.get(model.lower(), exception_func)
-        self.engine = self.engine(**exception_inputs.get(model.lower() in ENGINE_DICT, {'training_params': training_params, 'io_params': io_params}))
+        if model.lower() not in ENGINE_DICT:
+            raise NameError(f'Model {model.lower()} not found! Must be in {ENGINE_DICT.keys()}')
+        self.engine = ENGINE_DICT[model.lower()](training_params=training_params, io_params=io_params)
 
     def train(self, data_in: Union[str, list, pd.DataFrame]):
         self._check_inputs(data_in)
@@ -43,7 +41,7 @@ class PyCTR:
     def predict(self, x: Union[str, list, pd.DataFrame]):
         self._check_inputs(x)
         formatted_predict_data = self._format_predict_data(x)
-        self.engine.predict(formatted_predict_data)
+        return self.engine.predict(formatted_predict_data)
 
         # Format and predict
 
