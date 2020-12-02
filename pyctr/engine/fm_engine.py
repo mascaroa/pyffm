@@ -2,7 +2,7 @@ from typing import Union
 import numpy as np
 import logging
 
-from . import BaseEngine
+from .base_engine import BaseEngine
 
 from .model.fm_model import FMModel
 
@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 class FMEngine(BaseEngine):
-    def __init__(self, training_params, io_params):
-        super().__init__(training_params, io_params)
+    def __init__(self, training_params):
+        super().__init__(training_params)
 
     def create_model(self, *args, **kwargs):
         # TODO: figure out params that go in the model vs. in here

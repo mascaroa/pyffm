@@ -1,26 +1,20 @@
-from abc import ABC, abstractmethod
+from .ffm_engine import FFMEngine
+from .fm_engine import FMEngine
 
 
-class BaseEngine(ABC):
-    def __init__(self, training_params, io_params):
-        self.model = None
-        self.epochs = training_params.pop('epochs', 10)
-        self.learn_rate = training_params.pop('learn_rate', 0.2)
+class MetaFactory(type):
+    ENGINE_DICT = {'ffm': FFMEngine,
+                   'fm': FMEngine}
 
-        self._training_params = training_params
-        self._training_params['reg_lambda'] = 0.02 if 'reg_lambda' not in training_params else training_params['reg_lambda']
-        self._training_params['num_latent'] = 8 if 'num_latent' not in training_params else training_params['num_latent']
+    def __getitem__(cls, item):
+        return cls.ENGINE_DICT[item.lower()]
 
-        self._io_params = io_params
+    def __contains__(cls, item):
+        return item.lower() in cls.ENGINE_DICT
 
-    @abstractmethod
-    def create_model(self, *args, **kwargs):
-        pass
+    def __str__(cls):
+        return str(list(cls.ENGINE_DICT.keys()))
 
-    @abstractmethod
-    def train(self, x_data):
-        pass
 
-    @abstractmethod
-    def predict(self, x):
-        pass
+class EngineFactory(metaclass=MetaFactory):
+    pass
