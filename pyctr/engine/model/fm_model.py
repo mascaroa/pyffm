@@ -50,7 +50,7 @@ class FMModel(BaseModel):
             for feat in [val[0] for val in x]:
                 phi += (1 / np.sqrt(2)) * self.lin_terms[feat]
         for ((feat1, val1), (feat2, val2)) in it.combinations(x, r=2):
-            phi += (1 / 2) * np.dot(self.latent_w[feat1], self.latent_w[feat2]) * val1 * val2
+            phi += np.dot(self.latent_w[feat1], self.latent_w[feat2]) * val1 * val2
         return phi
 
     def logloss(self, x, y):

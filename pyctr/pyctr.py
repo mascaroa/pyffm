@@ -4,7 +4,6 @@ import pandas as pd
 
 from engine.ffm_engine import FFMEngine
 from engine.fm_engine import FMEngine
-from engine.poly2_engine import Poly2Engine
 
 import logging
 
@@ -12,8 +11,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel('INFO')
 
 ENGINE_DICT = {'ffm': FFMEngine,
-               'fm': FMEngine,
-               'poly2': Poly2Engine}
+               'fm': FMEngine}
 
 
 class PyCTR:
