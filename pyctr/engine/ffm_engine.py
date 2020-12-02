@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 class FFMEngine(BaseEngine):
     def __init__(self, training_params, io_params):
         super().__init__(training_params, io_params)
+        self._training_params['reg_lambda'] = 0.02 if 'reg_lambda' not in self._training_params else self._training_params['reg_lambda']
+        self._training_params['num_latent'] = 8 if 'num_latent' not in self._training_params else self._training_params['num_latent']
 
     def create_model(self, *args, **kwargs):
         # TODO: figure out params that go in the model vs. in here
@@ -20,23 +22,24 @@ class FFMEngine(BaseEngine):
 
     def train(self, x_train: list, x_test: Union[list, None] = None) -> int:
         """
-
-
         :param x_train: Training data formatted as a list of lists of tuples (rows) like:
                         [[click, (feat1, field1, val1), (feat2, field2, val2), ...],
                         [click, (...), ...]]
                         where click = 0 or 1; featN, fieldN are ints and valN are ints or floats
         :param x_test: Test data formatted the same as the train data
-        :return:
+        :return: 0 if trained succesfully
         """
         if self.model is None:
             num_fields = max([val[0] for row in x_train for val in row[1:]]) + 1
             num_features = max([val[1] for row in x_train for val in row[1:]]) + 1
-            self.create_model(num_latent=8, num_features=num_features, num_fields=num_fields, reg_lambda=0.01)
+            self.create_model(num_fields=num_fields, num_features=num_features, **self._training_params)
+
         if not isinstance(x_train, list):
             raise TypeError('x data must be a list data rows!')
+
         if isinstance(x_train[0], int) or isinstance(x_train[0], tuple):
             x_train = [x_train]
+
         for epoch in range(self.epochs):
             logger.info(f'Epoch {epoch}')
             sample_line = np.random.randint(0, len(x_train) - 1)
