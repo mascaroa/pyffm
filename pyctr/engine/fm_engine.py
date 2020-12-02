@@ -40,7 +40,10 @@ class FMEngine(BaseEngine):
             self.model.kappa = (x_train[sample_line][1:], x_train[sample_line][0])
             for x_line in x_train:
                 assert x_line[0] in [0, 1], f'Click must be 0 or 1, not {x_line[0]}!'
-
+                if self.model.use_linear:
+                    for x_1 in x_line[1:]:
+                        gl = self.model.calc_lin_subgrads(x_1)
+                        self.model.lin_terms[x_1[1]] -= self.learn_rate * gl
         return 0
 
     def predict(self, x):
