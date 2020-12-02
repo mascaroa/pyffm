@@ -12,8 +12,6 @@ logger = logging.getLogger(__name__)
 class FFMEngine(BaseEngine):
     def __init__(self, training_params, io_params):
         super().__init__(training_params, io_params)
-        self._training_params['reg_lambda'] = 0.02 if 'reg_lambda' not in self._training_params else self._training_params['reg_lambda']
-        self._training_params['num_latent'] = 8 if 'num_latent' not in self._training_params else self._training_params['num_latent']
 
     def create_model(self, *args, **kwargs):
         # TODO: figure out params that go in the model vs. in here
