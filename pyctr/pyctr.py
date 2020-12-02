@@ -86,13 +86,13 @@ class PyCTR:
 
     def _format_predict_data(self, x):
         #  Do something slightly different here?
-        if isinstance(data_in, str):
+        if isinstance(x, str):
             logger.info('Loading file data')
             return self._format_file_data(x)
-        elif isinstance(data_in, pd.DataFrame):
+        elif isinstance(x, pd.DataFrame):
             logger.info('Formatting dataframe')
             return self._format_dataframe(x)
-        elif isinstance(data_in, list):
+        elif isinstance(x, list):
             logger.info('Formatting list data')
             return self._format_list_data(x)
 
