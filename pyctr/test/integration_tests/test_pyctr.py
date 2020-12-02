@@ -8,14 +8,14 @@ class TestCTREngine(unittest.TestCase):
     def setUp(self) -> None:
         self.pyctr = PyCTR(model="ffm")
 
-    def test_basic_train(self):
+    def test_train_from_file(self):
 
         import os
 
         dir = os.getcwd()
-        pyctr.train(os.path.join(dir, 'test/integration_tests/small_train.txt'))
+        self.pyctr.train(os.path.join(dir, 'small_train.txt'))
         data_in = []
-        with open(os.path.join(dir, 'test/integration_tests/small_train.txt'), 'r') as f:
+        with open(os.path.join(dir, 'small_train.txt'), 'r') as f:
             while True:
                 line = f.readline()
                 if not line:
@@ -26,7 +26,7 @@ class TestCTREngine(unittest.TestCase):
         c_m = [[0, 0], [0, 0]]
         all_pos = 0
         for row in data_in:
-            pred = pyctr.predict(row[1:])
+            pred = self.pyctr.predict(row[1:])
             if row[0] == 1 and row[0] == np.round(pred):
                 c_m[0][0] += 1
             elif row[0] == 0 and row[0] == np.round(pred):
