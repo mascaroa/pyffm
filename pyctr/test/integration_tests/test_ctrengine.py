@@ -29,7 +29,7 @@ class TestCTREngine(unittest.TestCase):
                 click = [int(line.replace('\n', '').split(' ')[0])]
                 features = [(int(val.split(':')[0]), int(val.split(':')[1]), float(val.split(':')[2])) for val in line.replace('\n', '').split(' ')[1:]]
                 data_in.append(click + features)
-        self.ctr_engine.train(data_in)
+        self.ctr_engine.train(data_in, x_test=data_in)
         c_m = [[0, 0], [0, 0]]
         all_pos = 0
         for row in data_in:

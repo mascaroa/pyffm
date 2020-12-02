@@ -65,7 +65,7 @@ class FFMEngine(BaseEngine):
                 logloss = 0
                 for x_line in x_test:
                     assert x_line[0] in [0, 1], f'Click must be 0 or 1, not {x_line[0]}!'
-                    logloss += self.model.logloss(x_line[0], x_line[1:])
+                    logloss += self.model.logloss(x_line[1:], x_line[0])
                 logloss = logloss / len(x_test)
                 logger.info(f'Logloss: {logloss}')
 
