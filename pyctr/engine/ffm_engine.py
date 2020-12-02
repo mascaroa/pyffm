@@ -1,3 +1,4 @@
+from typing import Union
 import numpy as np
 import logging
 
@@ -17,28 +18,30 @@ class FFMEngine(BaseEngine):
         # Size of model, (num fields, num feats etc.?)
         self.model = FFMModel(*args, **kwargs)
 
-    def train(self, x_data: list) -> int:
+    def train(self, x_train: list, x_test: Union[list, None] = None) -> int:
         """
 
-        :param x_data: Training data formatted as a list of lists of tuples (rows) like:
+
+        :param x_train: Training data formatted as a list of lists of tuples (rows) like:
                         [[click, (feat1, field1, val1), (feat2, field2, val2), ...],
                         [click, (...), ...]]
                         where click = 0 or 1; featN, fieldN are ints and valN are ints or floats
+        :param x_test: Test data formatted the same as the train data
         :return:
         """
         if self.model is None:
-            num_fields = max([val[0] for row in x_data for val in row[1:]]) + 1
-            num_features = max([val[1] for row in x_data for val in row[1:]]) + 1
+            num_fields = max([val[0] for row in x_train for val in row[1:]]) + 1
+            num_features = max([val[1] for row in x_train for val in row[1:]]) + 1
             self.create_model(num_latent=8, num_features=num_features, num_fields=num_fields, reg_lambda=0.01)
-        if not isinstance(x_data, list):
+        if not isinstance(x_train, list):
             raise TypeError('x data must be a list data rows!')
-        if isinstance(x_data[0], int) or isinstance(x_data[0], tuple):
-            x_data = [x_data]
+        if isinstance(x_train[0], int) or isinstance(x_train[0], tuple):
+            x_train = [x_train]
         for epoch in range(self.epochs):
             logger.info(f'Epoch {epoch}')
-            sample_line = np.random.randint(0, len(x_data) - 1)
-            self.model.kappa = (x_data[sample_line][1:], x_data[sample_line][0])
-            for x_line in x_data:
+            sample_line = np.random.randint(0, len(x_train) - 1)
+            self.model.kappa = (x_train[sample_line][1:], x_train[sample_line][0])
+            for x_line in x_train:
                 assert x_line[0] in [0, 1], f'Click must be 0 or 1, not {x_line[0]}!'
                 if self.model.use_linear:
                     for x_1 in x_line[1:]:
@@ -56,8 +59,17 @@ class FFMEngine(BaseEngine):
                         self.model.latent_w[x_1[0], x_2[1]] -= self.learn_rate * g1 / np.sqrt(self.model.grads[x_1[0], x_2[1]])
                         self.model.latent_w[x_2[0], x_1[1]] -= self.learn_rate * g1 / np.sqrt(self.model.grads[x_2[0], x_1[1]])
             self.model.bias -= self.model.kappa * self.learn_rate
+
+            # If test data entered, calc logloss
+            if x_test:
+                logloss = 0
+                for x_line in x_test:
+                    assert x_line[0] in [0, 1], f'Click must be 0 or 1, not {x_line[0]}!'
+                    logloss += self.model.logloss(x_line[0], x_line[1:])
+                logloss = logloss / len(x_test)
+                logger.info(f'Logloss: {logloss}')
+
         return 0
 
     def predict(self, x):
         return self.model.predict(x)
-

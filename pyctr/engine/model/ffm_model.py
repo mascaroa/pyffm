@@ -49,3 +49,6 @@ class FFMModel(BaseModel):
 
     def predict(self, x):
         return logistic(self._phi(x))
+
+    def logloss(self, x, y):
+        return np.log(1 + np.exp(-y * self._phi(x)))
