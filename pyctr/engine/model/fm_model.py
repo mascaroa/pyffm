@@ -2,7 +2,7 @@ import itertools as it
 from typing import Tuple, List
 import numpy as np
 
-from . import BaseModel
+from .base_model import BaseModel
 from util import logistic
 
 

@@ -2,7 +2,7 @@ import itertools as it
 from typing import Tuple, List
 import numpy as np
 
-from . import BaseModel
+from .base_model import BaseModel
 from util import logistic
 
 
@@ -46,6 +46,8 @@ class FFMModel(BaseModel):
             for feat in [val[0] for val in x]:
                 phi += (1 / np.sqrt(2)) * self.lin_terms[feat]
         for ((field1, feat1, val1), (field2, feat2, val2)) in it.combinations(x, r=2):
+            if feat1 > len(self.latent_w[0]) or feat2 > len(self.latent_w[0]):
+                continue  # Skip unknown features
             phi += (1 / 2) * np.dot(self.latent_w[field2, feat1], self.latent_w[field1, feat2]) * val1 * val2
         return phi
 
