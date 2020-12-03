@@ -15,7 +15,7 @@ class Map:
         self._add_item(item)
         return self[item]
 
-    def get(self, item, default):
+    def get(self, item, default=None):
         if item in self._inv_map_dict:
             return self._inv_map_dict[item]
         return default

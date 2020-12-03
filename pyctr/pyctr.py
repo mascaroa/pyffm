@@ -4,6 +4,7 @@ import pandas as pd
 
 from engine import EngineFactory
 from engine.base_engine import BaseEngine
+from util import Map
 
 import logging
 
@@ -22,12 +23,14 @@ class PyCTR:
 
         self.train_from_file = self.io_params.get('train_from_file', False)
         self.predict_from_file = self.io_params.get('train_from_file', False)
-        model = 'FFM' if model is None else model
+        self.model = 'ffm' if model is None else model
 
-        if model.lower() not in EngineFactory:
-            raise NameError(f'Model {model.lower()} not found! Must be in {EngineFactory}')
+        if self.model not in EngineFactory:
+            raise NameError(f'Model {self.model.lower()} not found! Must be in {EngineFactory}')
         self.engine: BaseEngine
-        self.engine = EngineFactory[model.lower()](training_params=self.training_params)
+        self.engine = EngineFactory[self.model](training_params=self.training_params)
+        self.feature_map = Map()
+        self.field_map = Map()
 
     def train(self, data_in: Union[str, list, pd.DataFrame]):
         self._check_inputs(data_in)
@@ -47,7 +50,7 @@ class PyCTR:
         # Format and predict
 
     def _check_inputs(self, x):
-        if type(x) not in [str, list, type(pd.DataFrame)]:
+        if type(x) not in [str, list, pd.DataFrame]:
             raise TypeError(f'Predict data must be [str, list, pd.DataFrame] not {type(x)}')
         if isinstance(x, str):
             logger.debug('String input detected, training from file')
@@ -69,7 +72,16 @@ class PyCTR:
             return self._format_list_data(data_in)
 
     def _format_dataframe(self, df_in: pd.DataFrame) -> list:
-        return df_in
+        for col in df_in.columns:
+            if col != 'click':
+                df_in[col] = df_in[col].apply(lambda x: self.feature_map.add(x))
+
+        df_in.rename(columns={col: self.field_map.add(col) for col in df_in.columns})
+        data_dict = list(df_in.T.to_dict().values())
+        data_list = [tuple(val.items()) for val in data_dict]
+        data_list = [[vals[0][1]] + list(vals[1:]) for vals in data_list]
+
+
 
     def _format_list_data(self, list_in: list) -> list:
         return list_in
