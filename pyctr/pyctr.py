@@ -72,15 +72,20 @@ class PyCTR:
             return self._format_list_data(data_in)
 
     def _format_dataframe(self, df_in: pd.DataFrame) -> list:
-        for col in df_in.columns:
-            if col != 'click':
-                df_in[col] = df_in[col].apply(lambda x: self.feature_map.add(x))
+        if self.model == 'ffm':
+            for col in df_in.columns:
+                if col != 'click' and 'float' not in str(df_in[col].dtype):
+                    df_in[col] = df_in[col].apply(lambda x: (self.feature_map.add(x), x))
+        elif self.model == 'ffm':
+            for col in df_in.columns:
+                if col != 'click' and 'float' not in str(df_in[col].dtype):
+                    df_in[col] = df_in[col].apply(lambda x: self.feature_map.add(x))
 
-        df_in.rename(columns={col: self.field_map.add(col) for col in df_in.columns})
+        df_in.rename(columns={col: self.field_map.add(col) for col in df_in.columns}, inplace=True)
         data_dict = list(df_in.T.to_dict().values())
         data_list = [tuple(val.items()) for val in data_dict]
         data_list = [[vals[0][1]] + list(vals[1:]) for vals in data_list]
-
+        return data_list
 
 
     def _format_list_data(self, list_in: list) -> list:
