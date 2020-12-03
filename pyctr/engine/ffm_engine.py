@@ -7,6 +7,7 @@ from .base_engine import BaseEngine
 from .model.ffm_model import FFMModel
 
 logger = logging.getLogger(__name__)
+logger.setLevel('INFO')
 
 
 class FFMEngine(BaseEngine):

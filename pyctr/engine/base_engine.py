@@ -10,7 +10,7 @@ class BaseEngine(ABC):
 
         self._training_params = training_params
         self._training_params['reg_lambda'] = 0.02 if 'reg_lambda' not in training_params else training_params['reg_lambda']
-        self._training_params['num_latent'] = 8 if 'num_latent' not in training_params else training_params['num_latent']
+        self._training_params['num_latent'] = 4 if 'num_latent' not in training_params else training_params['num_latent']
 
     @abstractmethod
     def create_model(self, *args, **kwargs):
