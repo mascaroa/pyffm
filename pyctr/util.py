@@ -12,10 +12,12 @@ class Map:
         self._counter = 0
 
     def add(self, item):
+        item = str(item)
         self._add_item(item)
         return self[item]
 
     def get(self, item, default=None):
+        item = str(item)
         if item in self._inv_map_dict:
             return self._inv_map_dict[item]
         return default
@@ -30,11 +32,13 @@ class Map:
         return self._inv_map_dict[item]
 
     def __getitem__(self, item):
+        item = str(item)
         if item in self._inv_map_dict:
             return self._inv_map_dict[item]
         return False
 
     def __contains__(self, item):
+        item = str(item)
         return item in self._inv_map_dict
 
     def __str__(self):

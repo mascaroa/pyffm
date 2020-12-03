@@ -72,21 +72,17 @@ class PyCTR:
             return self._format_list_data(data_in)
 
     def _format_dataframe(self, df_in: pd.DataFrame) -> list:
-        if self.model == 'ffm':
-            for col in df_in.columns:
-                if col != 'click' and 'float' not in str(df_in[col].dtype):
-                    df_in[col] = df_in[col].apply(lambda x: (self.feature_map.add(x), x))
-        elif self.model == 'ffm':
-            for col in df_in.columns:
-                if col != 'click' and 'float' not in str(df_in[col].dtype):
-                    df_in[col] = df_in[col].apply(lambda x: self.feature_map.add(x))
+        for col in [col for col in df_in.columns if col != 'click']:
+            if 'float' not in str(df_in[col].dtype):
+                df_in[col] = df_in[col].apply(lambda x: (self.feature_map.add(x), 1))
+            else:
+                df_in[col] = df_in[col].apply(lambda x: (self.feature_map.add(x), x))
 
         df_in.rename(columns={col: self.field_map.add(col) for col in df_in.columns}, inplace=True)
         data_dict = list(df_in.T.to_dict().values())
         data_list = [tuple(val.items()) for val in data_dict]
-        data_list = [[vals[0][1]] + list(vals[1:]) for vals in data_list]
+        data_list = [[vals[0][1]] + [(val[0], *val[1]) for val in vals[1:]] for vals in data_list]
         return data_list
-
 
     def _format_list_data(self, list_in: list) -> list:
         return list_in
@@ -105,7 +101,7 @@ class PyCTR:
         return data_in
 
     def _train_test_split(self, data_in, split_frac) -> (list, list):
-        split_index = int(len(data_in) - len(data_in)*split_frac)
+        split_index = int(len(data_in) - len(data_in) * split_frac)
         return data_in[:split_index], data_in[split_index:]
 
     def _format_predict_data(self, x):
@@ -119,4 +115,3 @@ class PyCTR:
         elif isinstance(x, list):
             logger.debug('Formatting list data')
             return self._format_list_data(x)
-
