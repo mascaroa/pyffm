@@ -24,14 +24,14 @@ class FMModel(BaseModel):
             x, y = value
             self._kappa = np.divide(-y, (1 + np.exp(y * self._phi(x))))
 
-    def calc_subgrad(self, x_1, x_2) -> (float, float):
-        pass
+    def calc_subgrad(self, x_1) -> float:
+        return self._subgrad(self.kappa, *x_1)
 
-    def _subgrad(self, kappa, f1, x1, f2, x2):
-        pass
+    def _subgrad(self, kappa, f1, x1):
+        return self.reg_lambda * self.latent_w[f1] + kappa * x1 * (1 / np.sqrt(2))
 
     def calc_lin_subgrads(self, x_1):
-        return self._lin_subgrad(self.kappa, x_1[0], x_1[0])
+        return self._lin_subgrad(self.kappa, x_1[0], x_1[1])
 
     def _lin_subgrad(self, kappa, f1, x1):
         return self.reg_lambda * self.lin_terms[f1] + kappa * x1 * (1 / np.sqrt(2))

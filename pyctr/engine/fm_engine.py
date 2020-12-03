@@ -44,6 +44,16 @@ class FMEngine(BaseEngine):
                     for x_1 in x_line[1:]:
                         gl = self.model.calc_lin_subgrads(x_1)
                         self.model.lin_terms[x_1[1]] -= self.learn_rate * gl
+                for i, x_1 in enumerate(x_line[1:]):
+                    assert len(x_1) == 2, f'x must be a tuple like (field, val) not {x_1}!'
+                    if x_1[1] == 0:
+                        continue  # Only calculate non-zero valued terms
+                    g = self.model.calc_subgrads(x_1)
+                    self.model.grads[x_1[0]] += g ** 2
+                    self.model.latent_w[x_1[0]] -= self.learn_rate * g / np.sqrt(self.model.grads[x_1[0]])
+
+            self.model.bias -= self.model.kappa * self.learn_rate
+
         return 0
 
     def predict(self, x):
