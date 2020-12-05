@@ -33,6 +33,11 @@ class PyCTR:
         self.field_map = Map()
 
     def train(self, data_in: Union[str, list, pd.DataFrame]):
+        """
+
+        :param data_in:
+        :return:
+        """
         self._check_inputs(data_in)
         formatted_data = self._format_train_data(data_in)
         if not self.engine.train_quiet:
@@ -43,6 +48,11 @@ class PyCTR:
         self.engine.train(x_train=formatted_data)
 
     def predict(self, x: Union[str, list, pd.DataFrame]):
+        """
+
+        :param x:
+        :return:
+        """
         self._check_inputs(x)
         formatted_predict_data = self._format_predict_data(x)
         return self.engine.predict(formatted_predict_data)
@@ -72,6 +82,11 @@ class PyCTR:
             return self._format_list_data(data_in)
 
     def _format_dataframe(self, df_in: pd.DataFrame) -> list:
+        """
+
+        :param df_in:
+        :return:
+        """
         for col in [col for col in df_in.columns if col != 'click']:
             if 'float' not in str(df_in[col].dtype):
                 df_in[col] = df_in[col].apply(lambda x: (self.feature_map.add(x), 1))
@@ -85,9 +100,19 @@ class PyCTR:
         return data_list
 
     def _format_list_data(self, list_in: list) -> list:
+        """
+
+        :param list_in:
+        :return:
+        """
         return list_in
 
     def _format_file_data(self, filename: str) -> list:
+        """
+
+        :param filename:
+        :return:
+        """
         # TODO: Map features and fields!
         data_in = []
         with open(filename, 'r') as f:
@@ -101,10 +126,21 @@ class PyCTR:
         return data_in
 
     def _train_test_split(self, data_in, split_frac) -> (list, list):
+        """
+
+        :param data_in:
+        :param split_frac:
+        :return:
+        """
         split_index = int(len(data_in) - len(data_in) * split_frac)
         return data_in[:split_index], data_in[split_index:]
 
     def _format_predict_data(self, x):
+        """
+
+        :param x:
+        :return:
+        """
         #  Do something slightly different here?
         if isinstance(x, str):
             logger.debug('Loading file data')
