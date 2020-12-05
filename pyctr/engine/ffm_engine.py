@@ -6,7 +6,7 @@ import logging
 
 from .base_engine import BaseEngine
 
-from .model.ffm_model import FFMModel, _phi
+from .model.ffm_model import FFMModel, calc_phi
 
 logger = logging.getLogger(__name__)
 logger.setLevel('INFO')
@@ -129,6 +129,6 @@ def calc_logloss(x_test,
                  latent_w):
     logloss = 0
     for i, x_line in enumerate(x_test):
-        logloss += np.log(1 + np.exp(-y_test[i] * _phi(x_line, bias, lin_terms, latent_w)))
+        logloss += np.log(1 + np.exp(-y_test[i] * calc_phi(x_line, bias, lin_terms, latent_w)))
     logloss = logloss / len(x_test)
     return logloss
