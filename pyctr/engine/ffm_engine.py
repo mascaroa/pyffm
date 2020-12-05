@@ -16,10 +16,15 @@ class FFMEngine(BaseEngine):
     def __init__(self, training_params):
         super().__init__(training_params)
 
-    def create_model(self, num_fields, num_features, **training_params):
+    def create_model(self,
+                     num_fields,
+                     num_features,
+                     **training_params):
         self.model = FFMModel(num_fields=num_fields, num_features=num_features, **training_params)
 
-    def train(self, x_train: list, x_test: Union[list, None] = None) -> int:
+    def train(self,
+              x_train: list,
+              x_test: Union[list, None] = None) -> int:
         """
         :param x_train: Training data formatted as a list of lists of tuples (rows) like:
                         [[click, (feat1, field1, val1), (feat2, field2, val2), ...],
@@ -52,6 +57,7 @@ class FFMEngine(BaseEngine):
             logger.info(f'Epoch {epoch}')
             sample_line = np.random.randint(0, len(x_train) - 1)
             self.model.kappa = (x_train[sample_line], y_train[sample_line])
+            logger.info(f'Training on {len(x_train)} rows.')
             start_time = time.time()
             grads, lin_terms, latent_w = full_train(x_train,
                                                     self.model.kappa.copy(),
@@ -60,7 +66,7 @@ class FFMEngine(BaseEngine):
                                                     self.model.grads.copy(),
                                                     self.model.lin_terms.copy(),
                                                     self.model.latent_w.copy())
-            logger.info(f'Full train done, took {time.time() - start_time:.1}s')
+            logger.info(f'Full train done, took {time.time() - start_time:.1f}s')
             self.model.grads = grads
             self.model.lin_terms = lin_terms
             self.model.latent_w = latent_w
@@ -75,7 +81,7 @@ class FFMEngine(BaseEngine):
                                        self.model.bias,
                                        self.model.lin_terms.copy(),
                                        self.model.latent_w.copy())
-                logger.info(f'Logloss: {logloss}, \nTook {time.time() - start_time:.1}s')
+                logger.info(f'Logloss: {logloss}, \nTook {time.time() - start_time:.1f}s')
                 # Store this value in the model or engine?
 
         return 0
