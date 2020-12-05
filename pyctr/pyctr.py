@@ -17,7 +17,11 @@ class PyCTR:
         Top level class to handle the data formatting, io, etc.
     """
 
-    def __init__(self, model=None, training_params=None, io_params=None, **kwargs):
+    def __init__(self,
+                 model=None,
+                 training_params=None,
+                 io_params=None,
+                 **kwargs):
         self.training_params = {} if training_params is None else training_params
         self.io_params = {} if io_params is None else io_params
 
@@ -72,7 +76,7 @@ class PyCTR:
 
     def _format_train_data(self, data_in: Union[str, list, pd.DataFrame]) -> list:
         """
-        
+
         :param data_in:
         :return:
         """

@@ -53,6 +53,7 @@ class FFMEngine(BaseEngine):
                 y_test = np.array(np.array([np.array(sub_arr[0]) for sub_arr in x_test]))
                 x_test = np.array([np.array(np.array([np.array(val) for val in sub_arr[1:]])) for sub_arr in x_test])
 
+        full_start = time.time()
         for epoch in range(self.epochs):
             logger.info(f'Epoch {epoch}')
             sample_line = np.random.randint(0, len(x_train) - 1)
@@ -84,6 +85,7 @@ class FFMEngine(BaseEngine):
                 logger.info(f'Logloss: {logloss}, \nTook {time.time() - start_time:.1f}s')
                 # Store this value in the model or engine?
 
+        logger.info(f'Training done, took {time.time() - full_start:.1f}s')
         return 0
 
     def predict(self, x):

@@ -6,7 +6,13 @@ from util import logistic
 
 
 class FFMModel(BaseModel):
-    def __init__(self, num_latent, num_features, num_fields, reg_lambda, use_linear=True, **kwargs):
+    def __init__(self,
+                 num_latent,
+                 num_features,
+                 num_fields,
+                 reg_lambda,
+                 use_linear=True,
+                 **kwargs):
         super().__init__(num_features=num_features, reg_lambda=reg_lambda, use_linear=use_linear)
         self.latent_w = np.random.rand(num_fields, num_features, num_latent) * 1 / np.sqrt(num_latent)
         self.grads = np.ones((num_fields, num_features, num_latent))
