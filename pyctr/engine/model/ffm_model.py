@@ -1,6 +1,5 @@
-import itertools as it
-from typing import Tuple, List
 import numpy as np
+from numba import njit
 
 from .base_model import BaseModel
 from util import logistic
@@ -24,35 +23,31 @@ class FFMModel(BaseModel):
             x, y = value
             self._kappa = np.divide(-y, (1 + np.exp(y * self._phi(x))))
 
-    def calc_subgrads(self, x_1, x_2) -> (float, float):
-        return self._subgrad(self.kappa, *x_1, *x_2), self._subgrad(self.kappa, *x_2, *x_1)
-
-    def _subgrad(self, kappa, j1, f1, x1, j2, f2, x2):
-        return self.reg_lambda * self.latent_w[j1, f2] + kappa * self.latent_w[j2, f1] * x1 * x2
-
-    def calc_lin_subgrads(self, x_1):
-        return self._lin_subgrad(self.kappa, x_1[1], x_1[2])
-
-    def _lin_subgrad(self, kappa, f1, x1):
-        return self.reg_lambda * self.lin_terms[f1] + kappa * x1 * (1 / np.sqrt(2))
-
-    def _phi(self, x: List[Tuple[int, int, float]]):
+    def _phi(self, x: np.array):
         """
         Sum over bias and linear terms + sum of products of latent vectors
         """
-        phi = 0
-        if self.use_linear:
-            phi += self.bias
-            for feat in [val[0] for val in x]:
-                phi += (1 / np.sqrt(2)) * self.lin_terms[feat]
-        for ((field1, feat1, val1), (field2, feat2, val2)) in it.combinations(x, r=2):
-            if feat1 > len(self.latent_w[0]) or feat2 > len(self.latent_w[0]):
-                continue  # Skip unknown features
-            phi += (1 / 2) * np.dot(self.latent_w[field2, feat1], self.latent_w[field1, feat2]) * val1 * val2
-        return phi
+        return _phi(x, self.bias, self.lin_terms.copy(), self.latent_w.copy())
 
     def predict(self, x):
+        # TODO add batch predicting here
         return logistic(self._phi(x))
 
-    def logloss(self, x, y):
-        return np.log(1 + np.exp(-y * self._phi(x)))
+
+@njit
+def _phi(x,
+         bias,
+         lin_terms,
+         latent_w):
+    phi = 0
+    if bias and lin_terms:
+        phi = 0
+        phi += bias
+    for feat in [val[1] for val in x]:
+        phi += (1 / np.sqrt(2)) * lin_terms[feat]
+    for i, (field1, feat1, val1) in enumerate(x):
+        for (field2, feat2, val2) in x[i:]:
+            if feat1 > len(latent_w[0]) or feat2 > len(latent_w[0]):
+                continue  # Skip unknown features
+            phi += (1 / 2) * np.dot(latent_w[field2, feat1], latent_w[field1, feat2]) * val1 * val2
+    return phi

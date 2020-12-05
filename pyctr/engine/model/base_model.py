@@ -13,10 +13,11 @@ class BaseModel(ABC):
         self.bias = 0
 
         self.square_grad = 0
-        self.kappa = 0
+        self._kappa = 0
 
+    @property
     @abstractmethod
-    def _subgrad(self, *args):
+    def kappa(self):
         pass
 
     @abstractmethod
