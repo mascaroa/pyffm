@@ -71,6 +71,11 @@ class PyCTR:
             logger.debug('List data detected')
 
     def _format_train_data(self, data_in: Union[str, list, pd.DataFrame]) -> list:
+        """
+        
+        :param data_in:
+        :return:
+        """
         if isinstance(data_in, str):
             logger.debug('Loading file data')
             return self._format_file_data(data_in)
