@@ -14,10 +14,8 @@ class FFMEngine(BaseEngine):
     def __init__(self, training_params):
         super().__init__(training_params)
 
-    def create_model(self, *args, **kwargs):
-        # TODO: figure out params that go in the model vs. in here
-        # Size of model, (num fields, num feats etc.?)
-        self.model = FFMModel(*args, **kwargs)
+    def create_model(self, num_fields, num_features, **training_params):
+        self.model = FFMModel(num_fields=num_fields, num_features=num_features, **training_params)
 
     def train(self, x_train: list, x_test: Union[list, None] = None) -> int:
         """
