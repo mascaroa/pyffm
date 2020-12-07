@@ -118,17 +118,18 @@ def full_train(x_train,
                lin_terms,
                latent_w) -> Tuple[np.array, np.array, np.array]:
     for i in range(x_train.shape[0]):
-        x_line = x_train[i]
         if lin_terms is not None:
             for j in range(x_train.shape[1]):
+                x_1 = x_train[i, j]
                 lin_grad = (reg_lambda * lin_terms[x_1[1]] + kappa * x_1[2] * (1 / np.sqrt(2)))
                 lin_terms[x_1[1]] = lin_terms[x_1[1]] - learn_rate * lin_grad
 
-        for j in nb.prange(x_train.shape[1]):
-            x_1 = x_train[i, j]
+        for j_1 in nb.prange(x_train.shape[1]):
+            x_1 = x_train[i, j_1]
             if x_1[2] == 0:
                 continue  # Only calculate non-zero valued terms
-            for x_2 in x_line[i + 1:]:
+            for j_2 in range(j_1 + 1, x_train.shape[1]):
+                x_2 = x_train[i, j_2]
                 g1 = reg_lambda * latent_w[x_1[0], x_2[1]] + kappa * latent_w[x_2[0], x_1[1]] * x_1[2] * x_2[2]
                 g2 = reg_lambda * latent_w[x_2[0], x_1[1]] + kappa * latent_w[x_1[0], x_2[1]] * x_1[2] * x_2[2]
                 grads[x_1[0], x_2[1]] += g1 ** 2
