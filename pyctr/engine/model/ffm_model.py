@@ -40,7 +40,7 @@ class FFMModel(BaseModel):
         return logistic(self._phi(x))
 
 
-@njit
+@njit(cache=True)
 def calc_phi(x,
              bias,
              lin_terms,
