@@ -22,6 +22,9 @@ class Map:
             return self._inv_map_dict[item]
         return default
 
+    def max(self):
+        return max(self._map_dict.keys())
+
     def _add_item(self, item):
         if item not in self._inv_map_dict:
             while self._counter in self._inv_map_dict:

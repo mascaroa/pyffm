@@ -33,7 +33,7 @@ class FFMModel(BaseModel):
         """
         Sum over bias and linear terms + sum of products of latent vectors
         """
-        return calc_phi(x, self.bias, self.lin_terms.copy(), self.latent_w.copy())
+        return calc_phi(np.concatenate(x).reshape(len(x), 3), self.bias, self.lin_terms.copy(), self.latent_w.copy())
 
     def predict(self, x):
         # TODO add batch predicting here
@@ -46,11 +46,11 @@ def calc_phi(x,
              lin_terms,
              latent_w):
     phi = 0
-    if bias and lin_terms:
-        phi = 0
+    if bias is not None:
         phi += bias
-    for feat in [val[1] for val in x]:
-        phi += (1 / np.sqrt(2)) * lin_terms[feat]
+    if lin_terms is not None:
+        for feat in [val[1] for val in x]:
+            phi += (1 / np.sqrt(2)) * lin_terms[feat]
     for i, (field1, feat1, val1) in enumerate(x):
         for (field2, feat2, val2) in x[i:]:
             if feat1 > len(latent_w[0]) or feat2 > len(latent_w[0]):

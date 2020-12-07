@@ -1,7 +1,7 @@
 import time
 from typing import Union, Tuple
 import numpy as np
-from numba import njit
+from numba import numba as nb, njit
 import logging
 
 from .base_engine import BaseEngine
@@ -15,6 +15,26 @@ logger.setLevel('INFO')
 class FFMEngine(BaseEngine):
     def __init__(self, training_params):
         super().__init__(training_params)
+        self._num_fields = None
+        self._num_features = None
+
+    @property
+    def num_fields(self):
+        return self._num_fields
+
+    @num_fields.setter
+    def num_fields(self, value):
+        assert isinstance(value, int), 'Num fields must be an integer!'
+        self._num_fields = value
+
+    @property
+    def num_features(self):
+        return self._num_features
+
+    @num_features.setter
+    def num_features(self, value):
+        assert isinstance(value, int), 'Num features must be an integer!'
+        self._num_features = value
 
     def create_model(self,
                      num_fields,
@@ -23,35 +43,32 @@ class FFMEngine(BaseEngine):
         self.model = FFMModel(num_fields=num_fields, num_features=num_features, **training_params)
 
     def train(self,
-              x_train: list,
-              x_test: Union[list, None] = None) -> int:
+              x_train: np.array,
+              y_train: np.array,
+              x_test: Union[np.array, None] = None,
+              y_test: Union[np.array, None] = None) -> int:
         """
-        :param x_train: Training data formatted as a list of lists of tuples (rows) like:
-                        [[click, (feat1, field1, val1), (feat2, field2, val2), ...],
-                        [click, (...), ...]]
-                        where click = 0 or 1; featN, fieldN are ints and valN are ints or floats
-        :param x_test: Test data formatted the same as the train data
+
+        :param x_train: X training data formatted as an np.array
+        :param x_test: X test data formatted the same as the train data - optional
+        :param y_train:
+        :param y_test:
         :return: 0 if trained succesfully
         """
         if self.model is None:
-            num_fields = max([val[0] for row in x_train for val in row[1:]]) + 1
-            num_features = max([val[1] for row in x_train for val in row[1:]]) + 1
-            self.create_model(num_fields=num_fields, num_features=num_features, **self._training_params)
+            if self.num_fields is None:  # If model size not specified, infer from train data
+                self.num_fields = max([len(row) for row in x_train])
+            if self.num_features is None:
+                self.num_features = max([val[0] for row in x_train for val in row[1:]]) + 1
 
-        if not isinstance(x_train, list):
-            raise TypeError('x data must be a list data rows!')
-
-        if isinstance(x_train[0], int) or isinstance(x_train[0], tuple):
-            x_train = [x_train]
+            logger.info(f'Creating ffm model with {self.num_fields} fields and {self.num_features} features.')
+            self.create_model(num_fields=self.num_fields, num_features=self.num_features, **self._training_params)
 
         if type(x_train).__module__ != np.__name__:
-            y_train = np.array(np.array([np.array(sub_arr[0]) for sub_arr in x_train]))
-            x_train = np.array([np.array(np.array([np.array(val) for val in sub_arr[1:]])) for sub_arr in x_train])
+            raise TypeError('x data must be an np array!')
 
-        if x_test is not None:
-            if type(x_test).__module__ != np.__name__:
-                y_test = np.array(np.array([np.array(sub_arr[0]) for sub_arr in x_test]))
-                x_test = np.array([np.array(np.array([np.array(val) for val in sub_arr[1:]])) for sub_arr in x_test])
+        if x_test is not None and type(x_test).__module__ != np.__name__:
+            raise TypeError('x data must be an np array!')
 
         full_start = time.time()
         for epoch in range(self.epochs):
@@ -92,7 +109,7 @@ class FFMEngine(BaseEngine):
         return self.model.predict(x)
 
 
-@njit
+@njit(parallel=True, cache=True)
 def full_train(x_train,
                kappa,
                reg_lambda,
@@ -100,13 +117,15 @@ def full_train(x_train,
                grads,
                lin_terms,
                latent_w) -> Tuple[np.array, np.array, np.array]:
-    for x_line in x_train:
+    for i in range(x_train.shape[0]):
+        x_line = x_train[i]
         if lin_terms is not None:
-            for x_1 in x_line:
+            for j in range(x_train.shape[1]):
                 lin_grad = (reg_lambda * lin_terms[x_1[1]] + kappa * x_1[2] * (1 / np.sqrt(2)))
                 lin_terms[x_1[1]] = lin_terms[x_1[1]] - learn_rate * lin_grad
-        i = 0
-        for x_1 in x_line:
+
+        for j in nb.prange(x_train.shape[1]):
+            x_1 = x_train[i, j]
             if x_1[2] == 0:
                 continue  # Only calculate non-zero valued terms
             for x_2 in x_line[i + 1:]:
@@ -117,18 +136,18 @@ def full_train(x_train,
 
                 latent_w[x_1[0], x_2[1]] -= learn_rate * g1 / np.sqrt(grads[x_1[0], x_2[1]])
                 latent_w[x_2[0], x_1[1]] -= learn_rate * g1 / np.sqrt(grads[x_2[0], x_1[1]])
-            i += 1
     return grads, lin_terms, latent_w
 
 
-@njit
+@njit(parallel=True, cache=True)
 def calc_logloss(x_test,
                  y_test,
                  bias,
                  lin_terms,
                  latent_w):
     logloss = 0
-    for i, x_line in enumerate(x_test):
+    for i in nb.prange(len(x_test)):
+        x_line = x_test[i]
         logloss += np.log(1 + np.exp(-y_test[i] * calc_phi(x_line, bias, lin_terms, latent_w)))
     logloss = logloss / len(x_test)
     return logloss

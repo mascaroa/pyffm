@@ -36,20 +36,25 @@ class PyCTR:
         self.feature_map = Map()
         self.field_map = Map()
 
-    def train(self, data_in: Union[str, list, pd.DataFrame]):
+    def train(self,
+              x_train: Union[str, list, pd.DataFrame],
+              y_train: Union[str, list, pd.DataFrame, None] = None):
         """
 
-        :param data_in:
+        :param x_train:
+        :param y_train:
         :return:
         """
-        self._check_inputs(data_in)
-        formatted_data = self._format_train_data(data_in)
+        self._check_inputs(x_train, y_train)
+        formatted_x_data, formatted_y_data = self._format_train_data(x_train, y_train)
         if not self.engine.train_quiet:
             split_frac = self.training_params.get('split_frac', 0.1)
-            test_data, train_data = self._train_test_split(formatted_data, split_frac)
-            self.engine.train(x_train=train_data, x_test=test_data)
+            x_train, y_train, x_test, y_test = self._train_test_split(formatted_x_data, formatted_y_data, split_frac)
+            self.engine.num_fields = self.field_map.max() + 1
+            self.engine.num_features = self.feature_map.max() + 1
+            self.engine.train(x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test)
             return 0
-        self.engine.train(x_train=formatted_data)
+        self.engine.train(x_train=formatted_x_data, y_train=formatted_y_data)
 
     def predict(self, x: Union[str, list, pd.DataFrame]):
         """
@@ -63,9 +68,8 @@ class PyCTR:
 
         # Format and predict
 
-    def _check_inputs(self, x):
-        if type(x) not in [str, list, pd.DataFrame]:
-            raise TypeError(f'Predict data must be [str, list, pd.DataFrame] not {type(x)}')
+    def _check_inputs(self, x, y):
+
         if isinstance(x, str):
             logger.debug('String input detected, training from file')
             self.predict_from_file = True
@@ -74,75 +78,93 @@ class PyCTR:
         elif isinstance(x, list):
             logger.debug('List data detected')
 
-    def _format_train_data(self, data_in: Union[str, list, pd.DataFrame]) -> list:
+    def _format_train_data(self,
+                           x_data: Union[str, list, pd.DataFrame],
+                           y_data: Union[str, list, pd.DataFrame, None] = None) -> [np.array, np.array]:
+        if type(x_data) not in [str, list, pd.DataFrame]:
+            raise TypeError(f'Data must be [str, list, pd.DataFrame] not {type(x_data)}')
+        if isinstance(x_data, str):
+            return self._format_file_data(x_data)
+        elif isinstance(x_data, pd.DataFrame):
+            return self._format_dataframe(x_data, y_data)
+        elif isinstance(x_data, list):
+            return self._format_list_data(x_data, y_data)
+
+    def _format_dataframe(self,
+                          x_df: pd.DataFrame,
+                          y_df=None,
+                          label_name='click') -> (np.array, np.array):
         """
 
-        :param data_in:
+        :param x_df: X data (dataframe)
+        :param y_df: Y data (dataframe) - optional if y data is in X data already
+        :param label_name: Name of label column, not used if Y data inputted separately
         :return:
         """
-        if isinstance(data_in, str):
-            logger.debug('Loading file data')
-            return self._format_file_data(data_in)
-        elif isinstance(data_in, pd.DataFrame):
-            logger.debug('Formatting dataframe')
-            return self._format_dataframe(data_in)
-        elif isinstance(data_in, list):
-            logger.debug('Formatting list data')
-            return self._format_list_data(data_in)
-
-    def _format_dataframe(self, df_in: pd.DataFrame) -> list:
-        """
-
-        :param df_in:
-        :return:
-        """
-        for col in [col for col in df_in.columns if col != 'click']:
-            if 'float' not in str(df_in[col].dtype):
-                df_in[col] = df_in[col].apply(lambda x: (self.feature_map.add(x), 1))
+        logger.debug('Formatting dataframe')
+        for col in [col for col in x_df.columns if col != label_name]:
+            if 'float' not in str(x_df[col].dtype):
+                x_df[col] = x_df[col].apply(lambda x: np.array([self.field_map.add(col), self.feature_map.add(x), 1 if not pd.isna(x) else 0]))
             else:
-                df_in[col] = df_in[col].apply(lambda x: (self.feature_map.add(x), x))
+                x_df[col] = x_df[col].apply(lambda x: np.array([self.field_map.add(col), self.feature_map.add(x), x]))
 
-        df_in.rename(columns={col: self.field_map.add(col) for col in df_in.columns}, inplace=True)
-        data_dict = list(df_in.T.to_dict().values())
-        data_list = [tuple(val.items()) for val in data_dict]
-        data_list = [[vals[0][1]] + [(val[0], *val[1]) for val in vals[1:]] for vals in data_list]
-        return data_list
+        if y_df is None:
+            assert label_name in x_df.columns, f'Label column ({label_name}) must be in dataframe if y data is not passed separately!'
+            y_data = x_df[label_name].values
+            x_df.drop(columns=label_name, inplace=True)
+        else:
+            y_data = y_df
 
-    def _format_list_data(self, list_in: list) -> list:
+        # x_df.rename(columns={col: self.field_map.get(col) for col in x_df.columns}, inplace=True)
+        x_data = x_df.to_numpy()
+        num_cols = len(x_data[0])
+        num_rows = len(x_data)
+        x_data = np.concatenate(np.concatenate(x_data)).reshape(num_rows, num_cols, 3)
+        return x_data, y_data
+
+    def _format_list_data(self,
+                          x_list_in: list,
+                          y_list_in: list = None) -> (np.array, np.array):
         """
 
-        :param list_in:
+        :param x_list_in:
+        :param y_list_in:
         :return:
         """
-        return list_in
+        logger.debug('Formatting list data')
+        return x_list_in, y_list_in
 
-    def _format_file_data(self, filename: str) -> list:
+    def _format_file_data(self, filename: str) -> (np.array, np.array):
         """
-
-        :param filename:
-        :return:
+        Load preformatted (LibFFM) files for training
         """
+        logger.debug('Loading file data')
         # TODO: Map features and fields!
-        data_in = []
+        x_data = []
+        y_data = []
         with open(filename, 'r') as f:
             while True:
                 line = f.readline()
                 if not line:
                     break
-                click = [int(line.replace('\n', '').split(' ')[0])]
-                features = [(int(val.split(':')[0]), int(val.split(':')[1]), float(val.split(':')[2])) for val in line.replace('\n', '').split(' ')[1:]]
-                data_in.append(click + features)
-        return data_in
+                click = np.array([int(line.replace('\n', '').split(' ')[0])])
+                features = np.array([np.array(int(val.split(':')[0]), int(val.split(':')[1]), float(val.split(':')[2])) for val in line.replace('\n', '').split(' ')[1:]])
+                x_data.append(features)
+                y_data.append(click)
+        return x_data, y_data
 
-    def _train_test_split(self, data_in, split_frac) -> (list, list):
+    def _train_test_split(self,
+                          x,
+                          y,
+                          split_frac) -> (np.array, np.array, np.array, np.array):
         """
 
         :param data_in:
         :param split_frac:
-        :return:
+        :return: x_train, y_train, x_test, y_test
         """
-        split_index = int(len(data_in) - len(data_in) * split_frac)
-        return data_in[:split_index], data_in[split_index:]
+        split_index = int(len(x) - len(x) * split_frac)
+        return x[:split_index], y[:split_index], x[split_index:], y[split_index:]
 
     def _format_predict_data(self, x):
         """

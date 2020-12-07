@@ -17,7 +17,7 @@ class BaseEngine(ABC):
         pass
 
     @abstractmethod
-    def train(self, x_data):
+    def train(self, x_train, y_train, x_test, y_test):
         pass
 
     @abstractmethod

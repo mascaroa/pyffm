@@ -17,12 +17,17 @@ class FMEngine(BaseEngine):
         # TODO: figure out params that go in the model vs. in here
         self.model = FMModel(*args, **kwargs)
 
-    def train(self, x_train: list, x_test: Union[list, None] = None) -> int:
+    def train(self,
+              x_train: np.array,
+              y_train: np.array,
+              x_test: Union[np.array, None] = None,
+              y_test: Union[np.array, None] = None) -> int:
         """
-        :param x_train: list of lists of tuples (rows) like:
-                        [[click, (feat1, val1), (feat2, val2), ...],
-                        [click, (...), ...]]
-        :param x_test: Test data formatted the same as the train data
+
+        :param x_train: X training data formatted as an np.array
+        :param x_test: X test data formatted the same as the train data - optional
+        :param y_train:
+        :param y_test:
         :return: 0 if trained succesfully
         """
         if self.model is None:
