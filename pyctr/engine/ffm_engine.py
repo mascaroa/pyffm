@@ -44,6 +44,12 @@ class FFMEngine(BaseEngine):
         self.model = FFMModel(num_fields=num_fields, num_features=num_features, **training_params)
 
     def predict(self, x):
+        if len(x.shape) > 2:
+            logger.info('Batch predicting...')
+            preds = np.zeros(x.shape[0])
+            for i in range(x.shape[0]):
+                preds[i] = self.model.predict(x[i])
+            return preds
         return self.model.predict(x)
 
     def train(self,

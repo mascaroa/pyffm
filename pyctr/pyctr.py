@@ -142,10 +142,10 @@ class PyCTR:
                 line = f.readline()
                 if not line:
                     break
-                click = np.array([int(line.replace('\n', '').split(' ')[0])])
+                if len(line.split(':')[0].split(' ')) > 1:  # Click values present, parse y data as well
+                    y_data.append(np.array([int(line.replace('\n', '').split(' ')[0])]))
                 features = np.array([np.array([int(self.field_map.add(val.split(':')[0])), int(self.feature_map.add(val.split(':')[1])), float(val.split(':')[2])]) for val in line.replace('\n', '').split(' ')[1:]])
                 x_data.append(features)
-                y_data.append(click)
 
         num_cols = max([len(row) for row in x_data])
         num_rows = len(x_data)
@@ -156,7 +156,7 @@ class PyCTR:
             if len(x_data[i]) < num_cols:
                 x_data[i] = np.vstack((x_data[i], [np.array([0, 0, 0]) for j in range(len(x_data[i]), num_cols)]))
         x_data = np.concatenate(np.concatenate(x_data)).reshape(num_rows, num_cols, 3)
-        y_data = np.concatenate(y_data)
+        y_data = np.concatenate(y_data) if len(y_data) else None
         return x_data, y_data
 
     def _train_test_split(self,
@@ -181,7 +181,7 @@ class PyCTR:
         #  Do something slightly different here?
         if isinstance(x, str):
             logger.debug('Loading file data')
-            return self._format_file_data(x)
+            return self._format_file_data(x)[0]  # Only return x data for predicting
         elif isinstance(x, pd.DataFrame):
             logger.debug('Formatting dataframe')
             return self._format_dataframe(x)
