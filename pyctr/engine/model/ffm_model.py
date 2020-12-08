@@ -26,9 +26,11 @@ class FFMModel(BaseModel):
     def kappa(self, value):
         if isinstance(value, int):
             self._kappa = value
-        else:
+        elif isinstance(value, tuple) and len(value) == 2:
             x, y = value
             self._kappa = np.divide(-y, (1 + np.exp(y * self._phi(x))))
+        else:
+            raise TypeError(f'Unrecognized input for setting kappa {value}!')
 
     def _phi(self, x: np.array):
         """
