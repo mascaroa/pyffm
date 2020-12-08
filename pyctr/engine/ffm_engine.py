@@ -1,4 +1,5 @@
 import time
+import math
 from typing import Union, Tuple
 import numpy as np
 from numba import numba as nb, njit
@@ -42,6 +43,9 @@ class FFMEngine(BaseEngine):
                      **training_params):
         self.model = FFMModel(num_fields=num_fields, num_features=num_features, **training_params)
 
+    def predict(self, x):
+        return self.model.predict(x)
+
     def train(self,
               x_train: np.array,
               y_train: np.array,
@@ -78,12 +82,13 @@ class FFMEngine(BaseEngine):
             logger.info(f'Training on {len(x_train)} rows.')
             start_time = time.time()
             grads, lin_terms, latent_w = full_train(x_train,
-                                                    self.model.kappa.copy(),
+                                                    self.model.kappa,
                                                     self.model.reg_lambda,
                                                     self.learn_rate,
-                                                    self.model.grads.copy(),
-                                                    self.model.lin_terms.copy(),
-                                                    self.model.latent_w.copy())
+                                                    self.model.grads,
+                                                    self.model.lin_terms,
+                                                    self.model.latent_w,
+                                                    self.model.num_latent)
             logger.info(f'Full train done, took {time.time() - start_time:.1f}s')
             self.model.grads = grads
             self.model.lin_terms = lin_terms
@@ -105,9 +110,6 @@ class FFMEngine(BaseEngine):
         logger.info(f'Training done, took {time.time() - full_start:.1f}s')
         return 0
 
-    def predict(self, x):
-        return self.model.predict(x)
-
 
 @njit(parallel=True, cache=True)
 def full_train(x_train,
@@ -116,33 +118,33 @@ def full_train(x_train,
                learn_rate,
                grads,
                lin_terms,
-               latent_w) -> Tuple[np.array, np.array, np.array]:
+               latent_w,
+               num_latent) -> Tuple[np.array, np.array, np.array]:
+    g1 = np.zeros(num_latent)
+    g2 = np.zeros(num_latent)
     for i in range(x_train.shape[0]):
         for j_1 in nb.prange(x_train.shape[1]):
             x_1 = x_train[i, j_1]
 
-            if lin_terms is not None:
-                lin_grad = (reg_lambda * lin_terms[x_1[1]] + kappa * x_1[2] * (1 / np.sqrt(2)))
-                lin_terms[x_1[1]] = lin_terms[x_1[1]] - learn_rate * lin_grad
-
             if x_1[2] == 0:
-                continue  # Only calculate non-zero valued terms
+                continue
+
+            if lin_terms is not None:
+                lin_terms[int(x_1[1])] -= learn_rate * (reg_lambda * lin_terms[int(x_1[1])] + kappa * x_1[2] * (1 / np.sqrt(2)))
 
             for j_2 in range(j_1 + 1, x_train.shape[1]):
                 x_2 = x_train[i, j_2]
-                g1 = calc_squared_subgrad(reg_lambda, latent_w[x_1[0], x_2[1]], kappa, latent_w[x_2[0], x_1[1]], x_1[2], x_2[2])
-                g2 = calc_squared_subgrad(reg_lambda, latent_w[x_2[0], x_1[1]], kappa, latent_w[x_1[0], x_2[1]], x_1[2], x_2[2])
-                grads[x_1[0], x_2[1]] += g1
-                grads[x_2[0], x_1[1]] += g2
+                factor = x_1[2] * x_2[2] * kappa
+                for k in range(num_latent):  # This is faster than broadcasting for some reason
+                    g1[k] = reg_lambda * latent_w[int(x_1[0]), int(x_2[1])][k] + factor * latent_w[int(x_2[0]), int(x_1[1])][k]
+                    g2[k] = reg_lambda * latent_w[int(x_2[0]), int(x_1[1])][k] + factor * latent_w[int(x_1[0]), int(x_2[1])][k]
+                grads[int(x_1[0]), int(x_2[1])] += g1 * g1
+                grads[int(x_2[0]), int(x_1[1])] += g2 * g2
 
-                latent_w[x_1[0], x_2[1]] -= learn_rate * g1 / np.sqrt(grads[x_1[0], x_2[1]])
-                latent_w[x_2[0], x_1[1]] -= learn_rate * g2 / np.sqrt(grads[x_2[0], x_1[1]])
+                latent_w[int(x_1[0]), int(x_2[1])] -= learn_rate * g1 / np.sqrt(grads[int(x_1[0]), int(x_2[1])])
+                latent_w[int(x_2[0]), int(x_1[1])] -= learn_rate * g2 / np.sqrt(grads[int(x_2[0]), int(x_1[1])])
+
     return grads, lin_terms, latent_w
-
-
-@njit(cache=True)
-def calc_squared_subgrad(reg_lambda, latent_w1, latent_w2, kappa, x1, x2):
-    return (reg_lambda * latent_w1 + kappa * latent_w2 * x1 * x2) ** 2
 
 
 @njit(parallel=True, cache=True)
@@ -153,7 +155,6 @@ def calc_logloss(x_test,
                  latent_w):
     logloss = 0
     for i in nb.prange(len(x_test)):
-        x_line = x_test[i]
-        logloss += np.log(1 + np.exp(-y_test[i] * calc_phi(x_line, bias, lin_terms, latent_w)))
+        logloss += np.log(1 + np.exp(-y_test[i] * calc_phi(x_test[i], bias, lin_terms, latent_w)))
     logloss = logloss / len(x_test)
     return logloss

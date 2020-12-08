@@ -148,9 +148,20 @@ class PyCTR:
                 if not line:
                     break
                 click = np.array([int(line.replace('\n', '').split(' ')[0])])
-                features = np.array([np.array(int(val.split(':')[0]), int(val.split(':')[1]), float(val.split(':')[2])) for val in line.replace('\n', '').split(' ')[1:]])
+                features = np.array([np.array([int(self.field_map.add(val.split(':')[0])), int(self.feature_map.add(val.split(':')[1])), float(val.split(':')[2])]) for val in line.replace('\n', '').split(' ')[1:]])
                 x_data.append(features)
                 y_data.append(click)
+
+        num_cols = max([len(row) for row in x_data])
+        num_rows = len(x_data)
+
+        # Zero-pad each row so we can have 1 nice np array
+        # This is probably super slow... TODO: fix it
+        for i in range(len(x_data)):
+            if len(x_data[i]) < num_cols:
+                x_data[i] = np.vstack((x_data[i], [np.array([0, 0, 0]) for j in range(len(x_data[i]), num_cols)]))
+        x_data = np.concatenate(np.concatenate(x_data)).reshape(num_rows, num_cols, 3)
+        y_data = np.concatenate(y_data)
         return x_data, y_data
 
     def _train_test_split(self,

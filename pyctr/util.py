@@ -30,7 +30,7 @@ class Map:
             while self._counter in self._inv_map_dict:
                 self._counter += 1
             self._map_dict[self._counter] = item
-            self._inv_map_dict[item] = self._counter
+            self._inv_map_dict[item] = int(self._counter)
             self._counter += 1
         return self._inv_map_dict[item]
 
