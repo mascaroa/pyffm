@@ -45,7 +45,7 @@ class PyCTR:
         :param y_train:
         :return:
         """
-        self._check_inputs(x_train, y_train)
+        assert self._check_inputs(x_train, y_train) == 0
         formatted_x_data, formatted_y_data = self._format_train_data(x_train, y_train)
         if not self.engine.train_quiet:
             split_frac = self.training_params.get('split_frac', 0.1)
@@ -62,21 +62,18 @@ class PyCTR:
         :param x:
         :return:
         """
-        self._check_inputs(x)
+        assert self._check_inputs(x) == 0
         formatted_predict_data = self._format_predict_data(x)
         return self.engine.predict(formatted_predict_data)
 
         # Format and predict
 
-    def _check_inputs(self, x, y):
-
-        if isinstance(x, str):
-            logger.debug('String input detected, training from file')
-            self.predict_from_file = True
-        elif isinstance(x, pd.DataFrame):
-            logger.debug('DataFrame input detected')
-        elif isinstance(x, list):
-            logger.debug('List data detected')
+    def _check_inputs(self, x, y=None):
+        if type(x) in [list, pd.DataFrame, str]:
+            if y is not None and type(y) in [list, pd.DataFrame, str]:
+                return 0
+            return 0
+        raise TypeError(f'Input data must be [list, pd.DataFrame, str] not {type(x)}!')
 
     def _format_train_data(self,
                            x_data: Union[str, list, pd.DataFrame],
@@ -95,7 +92,6 @@ class PyCTR:
                           y_df=None,
                           label_name='click') -> (np.array, np.array):
         """
-
         :param x_df: X data (dataframe)
         :param y_df: Y data (dataframe) - optional if y data is in X data already
         :param label_name: Name of label column, not used if Y data inputted separately
@@ -126,9 +122,8 @@ class PyCTR:
                           x_list_in: list,
                           y_list_in: list = None) -> (np.array, np.array):
         """
-
-        :param x_list_in:
-        :param y_list_in:
+        :param x_list_in: List of x data like: [(field, feature, value), (...)]
+        :param y_list_in: List of y data - optional if y data
         :return:
         """
         logger.debug('Formatting list data')
