@@ -7,7 +7,7 @@ from pyctr.engine.ffm_engine import FFMEngine
 
 class TestCTREngine(unittest.TestCase):
     def setUp(self) -> None:
-        self.ctr_engine = FFMEngine(training_params={'epochs': 10}, io_params={})
+        self.ctr_engine = FFMEngine(training_params={'epochs': 10})
 
     def test_basic_train(self):
         train_data = [[1, (0, 0, 1), (1, 1, 1), (2, 2, 1), (3, 3, 1)],
@@ -19,7 +19,7 @@ class TestCTREngine(unittest.TestCase):
         print(self.ctr_engine.predict([(0, 6, 1), (1, 7, 1), (2, 8, 1), (3, 9, 1)]))
 
     def test_bigger_train(self):
-        self.ctr_engine = FFMEngine(training_params={'epochs': 10}, io_params={})
+        self.ctr_engine = FFMEngine(training_params={'epochs': 10})
         data_in = []
         with open('small_train.txt', 'r') as f:
             while True:
