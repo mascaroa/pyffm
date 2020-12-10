@@ -4,7 +4,7 @@ import pandas as pd
 
 from engine import EngineFactory
 from engine.base_engine import BaseEngine
-from util import Map
+from util import Map, run_as_subprocess
 
 import logging
 
@@ -83,40 +83,85 @@ class PyCTR:
         if isinstance(x_data, str):
             return self._format_file_data(x_data)
         elif isinstance(x_data, pd.DataFrame):
-            return self._format_dataframe(x_data, y_data)
+            return self._format_dataframe_train(x_data, y_data)
         elif isinstance(x_data, list):
             return self._format_list_data(x_data, y_data)
 
-    def _format_dataframe(self,
-                          x_df: pd.DataFrame,
-                          y_df=None,
-                          label_name='click') -> (np.array, np.array):
+    def _format_predict_data(self, x):
         """
-        :param x_df: X data (dataframe)
+
+        :param x:
+        :return:
+        """
+        #  Do something slightly different here?
+        if isinstance(x, str):
+            logger.debug('Loading file data')
+            return self._format_file_data(x)[0]  # Only return x data for predicting
+        elif isinstance(x, pd.DataFrame):
+            logger.debug('Formatting dataframe')
+            return self._format_dataframe_train(x)
+        elif isinstance(x, list):
+            logger.debug('Formatting list data')
+            return self._format_list_data(x)
+
+    @run_as_subprocess
+    def _format_dataframe_train(self,
+                                x_df: pd.DataFrame,
+                                y_df=None,
+                                label_name='click') -> (np.array, np.array):
+        """
+        :param x_train: X data (dataframe)
         :param y_df: Y data (dataframe) - optional if y data is in X data already
         :param label_name: Name of label column, not used if Y data inputted separately
         :return:
         """
+        x_train = x_df.copy()  # Running as subprocess so memory is freed after (df.copy is *definitely*  temporary this way)
         logger.debug('Formatting dataframe')
-        for col in [col for col in x_df.columns if col != label_name]:
-            if 'float' not in str(x_df[col].dtype):
-                x_df[col] = x_df[col].apply(lambda x: np.array([self.field_map.add(col), self.feature_map.add(x), 1 if not pd.isna(x) else 0]))
+        for col in [col for col in x_train.columns if col != label_name]:
+            if 'float' not in str(x_train[col].dtype):
+                x_train[col] = x_train[col].apply(lambda x: np.array([self.field_map.add(col), self.feature_map.add(x), 1 if not pd.isna(x) else 0]))
             else:
-                x_df[col] = x_df[col].apply(lambda x: np.array([self.field_map.add(col), self.feature_map.add(x), x]))
+                x_train[col] = x_train[col].apply(lambda x: np.array([self.field_map.add(col), self.feature_map.add(x), x]))
 
         if y_df is None:
-            assert label_name in x_df.columns, f'Label column ({label_name}) must be in dataframe if y data is not passed separately!'
-            y_data = x_df[label_name].values
-            x_df.drop(columns=label_name, inplace=True)
+            assert label_name in x_train.columns, f'Label column ({label_name}) must be in dataframe if y data is not passed separately!'
+            y_data = x_train[label_name].values
+            x_train.drop(columns=label_name, inplace=True)
         else:
             y_data = y_df
 
         # x_df.rename(columns={col: self.field_map.get(col) for col in x_df.columns}, inplace=True)
-        x_data = x_df.to_numpy()
+        x_data = x_train.to_numpy()
         num_cols = len(x_data[0])
         num_rows = len(x_data)
         x_data = np.concatenate(np.concatenate(x_data)).reshape(num_rows, num_cols, 3)
         return x_data, y_data
+
+    @run_as_subprocess
+    def _format_dataframe_predict(self,
+                                  x_df: pd.DataFrame,
+                                  label_name='click') -> (np.array, np.array):
+        """
+
+        # TODO:....
+        :param x_train: X data (dataframe)
+        :param label_name: Name of label column, in case the predict dataframe has the label colummn as well
+        :return: np.array (formatted predict data)
+        """
+        x_train = x_df.copy()  # Running as subprocess so memory is freed after (df.copy is *definitely*  temporary this way)
+        logger.debug('Formatting dataframe')
+        for col in [col for col in x_train.columns if col != label_name]:
+            if 'float' not in str(x_train[col].dtype):
+                x_train[col] = x_train[col].apply(lambda x: np.array([self.field_map.get(col), self.feature_map.add(x), 1 if not pd.isna(x) else 0]))
+            else:
+                x_train[col] = x_train[col].apply(lambda x: np.array([self.field_map.get(col), self.feature_map.add(x), x]))
+
+        # x_df.rename(columns={col: self.field_map.get(col) for col in x_df.columns}, inplace=True)
+        x_data = x_train.to_numpy()
+        num_cols = len(x_data[0])
+        num_rows = len(x_data)
+        x_data = np.concatenate(np.concatenate(x_data)).reshape(num_rows, num_cols, 3)
+        return x_data
 
     def _format_list_data(self,
                           x_list_in: list,
@@ -171,20 +216,3 @@ class PyCTR:
         """
         split_index = int(len(x) - len(x) * split_frac)
         return x[:split_index], y[:split_index], x[split_index:], y[split_index:]
-
-    def _format_predict_data(self, x):
-        """
-
-        :param x:
-        :return:
-        """
-        #  Do something slightly different here?
-        if isinstance(x, str):
-            logger.debug('Loading file data')
-            return self._format_file_data(x)[0]  # Only return x data for predicting
-        elif isinstance(x, pd.DataFrame):
-            logger.debug('Formatting dataframe')
-            return self._format_dataframe(x)
-        elif isinstance(x, list):
-            logger.debug('Formatting list data')
-            return self._format_list_data(x)

@@ -1,8 +1,46 @@
+import sys
 import numpy as np
+from multiprocessing import Queue, Process
+import inspect
 
 
 def logistic(x):
     return np.divide(1, (1 + np.exp(-x)))
+
+
+def run_as_subprocess(func):
+    queue = Queue()
+
+    if 'win' in sys.platform:  # Windows requires pickling all Process() args, so this can't be done (also isn't needed)
+        return func
+
+    def bottom_decorator(*args, **kwargs):
+        in_queue = kwargs.pop('Q')
+        in_queue.put(func(*args, **kwargs))
+
+    def top_decorator(*args, **kwargs):
+        attempt = 0
+        timeout = kwargs.pop('timeout', None)
+        retries = kwargs.pop('retries', None)
+        if 'Q' in kwargs:
+            return NameError(f"Can't use Q as kwarg name when using this function! {inspect.stack()[1].function}")
+        while True:
+            p = Process(target=bottom_decorator,
+                        args=args,
+                        kwargs={**kwargs, 'Q': queue})
+            p.start()
+            try:
+                result = queue.get(timeout=timeout)
+            except Exception as e:
+                if p.is_alive():
+                    p.terminate()
+                if attempt < retries:
+                    attempt += 1
+                    continue
+                raise e
+            return result
+
+    return top_decorator
 
 
 class Map:
