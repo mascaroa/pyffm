@@ -13,13 +13,14 @@ class FMEngine(BaseEngine):
     def __init__(self, training_params):
         super().__init__(training_params)
 
-    def create_model(self, *args, **kwargs):
-        # TODO: figure out params that go in the model vs. in here
-        self.model = FMModel(*args, **kwargs)
+    def create_model(self,
+                     num_features,
+                     **training_params):
+        self.model = FMModel(num_features=num_features, **training_params)
 
     def train(self,
               x_train: np.array,
-              y_train: np.array,
+              y_train: Union[np.array, None] = None,
               x_test: Union[np.array, None] = None,
               y_test: Union[np.array, None] = None) -> int:
         """

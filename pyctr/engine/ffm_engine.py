@@ -54,7 +54,7 @@ class FFMEngine(BaseEngine):
 
     def train(self,
               x_train: np.array,
-              y_train: np.array,
+              y_train: Union[np.array, None] = None,
               x_test: Union[np.array, None] = None,
               y_test: Union[np.array, None] = None) -> int:
         """

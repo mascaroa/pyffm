@@ -83,9 +83,9 @@ class PyCTR:
         if isinstance(x_data, str):
             return self._format_file_data(x_data)
         elif isinstance(x_data, pd.DataFrame):
-            return self._format_dataframe_train(x_data, y_data)
+            return self._format_dataframe(x_data, y_df=y_data)
         elif isinstance(x_data, list):
-            return self._format_list_data(x_data, y_data)
+            return self._format_list_data(x_data, y_list=y_data)
 
     def _format_predict_data(self, x):
         """
@@ -96,19 +96,20 @@ class PyCTR:
         #  Do something slightly different here?
         if isinstance(x, str):
             logger.debug('Loading file data')
-            return self._format_file_data(x)[0]  # Only return x data for predicting
+            return self._format_file_data(x, train_or_predict='predict')
         elif isinstance(x, pd.DataFrame):
             logger.debug('Formatting dataframe')
-            return self._format_dataframe_train(x)
+            return self._format_dataframe(x, train_or_predict='predict')
         elif isinstance(x, list):
             logger.debug('Formatting list data')
-            return self._format_list_data(x)
+            return self._format_list_data(x, train_or_predict='predict')
 
     @run_as_subprocess
-    def _format_dataframe_train(self,
-                                x_df: pd.DataFrame,
-                                y_df=None,
-                                label_name='click') -> (np.array, np.array):
+    def _format_dataframe(self,
+                          x_df: pd.DataFrame,
+                          y_df=None,
+                          train_or_predict='train',
+                          label_name='click') -> (np.array, np.array):
         """
         :param x_train: X data (dataframe)
         :param y_df: Y data (dataframe) - optional if y data is in X data already
@@ -117,13 +118,22 @@ class PyCTR:
         """
         x_train = x_df.copy()  # Running as subprocess so memory is freed after (df.copy is *definitely*  temporary this way)
         logger.debug('Formatting dataframe')
+        if train_or_predict == 'train':
+            field_map_func = self.field_map.add
+            feature_map_func = self.feature_map.add
+        elif train_or_predict == 'predict':
+            field_map_func = self.field_map.get
+            feature_map_func = self.feature_map.get
+        else:
+            raise NameError(f'train_or_predict must be "train" or "predict" not {train_or_predict}!')
+
         for col in [col for col in x_train.columns if col != label_name]:
             if 'float' not in str(x_train[col].dtype):
-                x_train[col] = x_train[col].apply(lambda x: np.array([self.field_map.add(col), self.feature_map.add(x), 1 if not pd.isna(x) else 0]))
+                x_train[col] = x_train[col].apply(lambda x: np.array([field_map_func(col), feature_map_func(x), 1 if not pd.isna(x) else 0]))
             else:
-                x_train[col] = x_train[col].apply(lambda x: np.array([self.field_map.add(col), self.feature_map.add(x), x]))
+                x_train[col] = x_train[col].apply(lambda x: np.array([field_map_func(col), feature_map_func(x), x]))
 
-        if y_df is None:
+        if y_df is None and train_or_predict == 'train':
             assert label_name in x_train.columns, f'Label column ({label_name}) must be in dataframe if y data is not passed separately!'
             y_data = x_train[label_name].values
             x_train.drop(columns=label_name, inplace=True)
@@ -135,53 +145,40 @@ class PyCTR:
         num_cols = len(x_data[0])
         num_rows = len(x_data)
         x_data = np.concatenate(np.concatenate(x_data)).reshape(num_rows, num_cols, 3)
-        return x_data, y_data
 
-    @run_as_subprocess
-    def _format_dataframe_predict(self,
-                                  x_df: pd.DataFrame,
-                                  label_name='click') -> (np.array, np.array):
-        """
-
-        # TODO:....
-        :param x_train: X data (dataframe)
-        :param label_name: Name of label column, in case the predict dataframe has the label colummn as well
-        :return: np.array (formatted predict data)
-        """
-        x_train = x_df.copy()  # Running as subprocess so memory is freed after (df.copy is *definitely*  temporary this way)
-        logger.debug('Formatting dataframe')
-        for col in [col for col in x_train.columns if col != label_name]:
-            if 'float' not in str(x_train[col].dtype):
-                x_train[col] = x_train[col].apply(lambda x: np.array([self.field_map.get(col), self.feature_map.add(x), 1 if not pd.isna(x) else 0]))
-            else:
-                x_train[col] = x_train[col].apply(lambda x: np.array([self.field_map.get(col), self.feature_map.add(x), x]))
-
-        # x_df.rename(columns={col: self.field_map.get(col) for col in x_df.columns}, inplace=True)
-        x_data = x_train.to_numpy()
-        num_cols = len(x_data[0])
-        num_rows = len(x_data)
-        x_data = np.concatenate(np.concatenate(x_data)).reshape(num_rows, num_cols, 3)
+        if y_data is not None:
+            return x_data, y_data
         return x_data
 
     def _format_list_data(self,
-                          x_list_in: list,
-                          y_list_in: list = None) -> (np.array, np.array):
+                          x_list: list,
+                          y_list: list = None,
+                          train_or_predict: str = 'train') -> (np.array, np.array):
         """
-        :param x_list_in: List of x data like: [(field, feature, value), (...)]
-        :param y_list_in: List of y data - optional if y data
+        :param x_list: List of x data like: [(field, feature, value), (...)]
+        :param y_list: List of y data - optional if y data
         :return:
         """
         logger.debug('Formatting list data')
-        return x_list_in, y_list_in
+        return x_list, y_list
 
-    def _format_file_data(self, filename: str) -> (np.array, np.array):
+    def _format_file_data(self,
+                          filename: str,
+                          train_or_predict: str = 'train') -> (np.array, np.array):
         """
         Load preformatted (LibFFM) files for training
         """
         logger.debug('Loading file data')
-        # TODO: Map features and fields!
-        x_data = []
-        y_data = []
+        if train_or_predict == 'train':
+            field_map_func = self.field_map.add
+            feature_map_func = self.feature_map.add
+        elif train_or_predict == 'predict':
+            field_map_func = self.field_map.get
+            feature_map_func = self.feature_map.get
+        else:
+            raise NameError(f'train_or_predict must be "train" or "predict" not {train_or_predict}!')
+
+        x_data, y_data = [], []
         with open(filename, 'r') as f:
             while True:
                 line = f.readline()
@@ -189,20 +186,21 @@ class PyCTR:
                     break
                 if len(line.split(':')[0].split(' ')) > 1:  # Click values present, parse y data as well
                     y_data.append(np.array([int(line.replace('\n', '').split(' ')[0])]))
-                features = np.array([np.array([int(self.field_map.add(val.split(':')[0])), int(self.feature_map.add(val.split(':')[1])), float(val.split(':')[2])]) for val in line.replace('\n', '').split(' ')[1:]])
+                features = np.array([np.array([int(field_map_func(val.split(':')[0])), int(feature_map_func(val.split(':')[1])), float(val.split(':')[2])]) for val in line.replace('\n', '').split(' ')[1:]])
                 x_data.append(features)
 
         num_cols = max([len(row) for row in x_data])
         num_rows = len(x_data)
 
         # Zero-pad each row so we can have 1 nice np array
-        # This is probably super slow... TODO: fix it
+        # This might be super slow?...
         for i in range(len(x_data)):
             if len(x_data[i]) < num_cols:
                 x_data[i] = np.vstack((x_data[i], [np.array([0, 0, 0]) for j in range(len(x_data[i]), num_cols)]))
         x_data = np.concatenate(np.concatenate(x_data)).reshape(num_rows, num_cols, 3)
-        y_data = np.concatenate(y_data) if len(y_data) else None
-        return x_data, y_data
+        if y_data is not None:
+            return x_data, np.concatenate(y_data)
+        return x_data
 
     def _train_test_split(self,
                           x,
