@@ -9,7 +9,7 @@ from util import Map, run_as_subprocess
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel('INFO')
+logger.setLevel('INFO') # TODO: propagate logging properly from init kwargs
 
 
 class PyCTR:
@@ -22,6 +22,8 @@ class PyCTR:
                  training_params=None,
                  io_params=None,
                  **kwargs):
+        self.log_level = kwargs.get()
+
         self.training_params = {} if training_params is None else training_params
         self.io_params = {} if io_params is None else io_params
 
@@ -39,14 +41,8 @@ class PyCTR:
     def train(self,
               x_train: Union[str, list, pd.DataFrame],
               y_train: Union[str, list, pd.DataFrame, None] = None):
-        """
-
-        :param x_train:
-        :param y_train:
-        :return:
-        """
         assert self._check_inputs(x_train, y_train) == 0
-        formatted_x_data, formatted_y_data = self._format_train_data(x_train, y_train)
+        formatted_x_data, formatted_y_data = self._format_data(x_train, y_train)
         if not self.engine.train_quiet:
             split_frac = self.training_params.get('split_frac', 0.1)
             x_train, y_train, x_test, y_test = self._train_test_split(formatted_x_data, formatted_y_data, split_frac)
@@ -57,16 +53,9 @@ class PyCTR:
         self.engine.train(x_train=formatted_x_data, y_train=formatted_y_data)
 
     def predict(self, x: Union[str, list, pd.DataFrame]):
-        """
-
-        :param x:
-        :return:
-        """
         assert self._check_inputs(x) == 0
-        formatted_predict_data = self._format_predict_data(x)
+        formatted_predict_data = self._format_data(x, train_or_predict='predict')
         return self.engine.predict(formatted_predict_data)
-
-        # Format and predict
 
     def _check_inputs(self, x, y=None):
         if type(x) in [list, pd.DataFrame, str]:
@@ -75,34 +64,17 @@ class PyCTR:
             return 0
         raise TypeError(f'Input data must be [list, pd.DataFrame, str] not {type(x)}!')
 
-    def _format_train_data(self,
-                           x_data: Union[str, list, pd.DataFrame],
-                           y_data: Union[str, list, pd.DataFrame, None] = None) -> [np.array, np.array]:
-        if type(x_data) not in [str, list, pd.DataFrame]:
-            raise TypeError(f'Data must be [str, list, pd.DataFrame] not {type(x_data)}')
+    def _format_data(self,
+                     x_data: Union[str, list, pd.DataFrame],
+                     y_data: Union[str, list, pd.DataFrame, None] = None,
+                     train_or_predict: str = 'train') -> [np.array, np.array]:
         if isinstance(x_data, str):
-            return self._format_file_data(x_data)
+            return self._format_file_data(x_data, train_or_predict=train_or_predict)
         elif isinstance(x_data, pd.DataFrame):
-            return self._format_dataframe(x_data, y_df=y_data)
+            return self._format_dataframe(x_data, y_df=y_data, train_or_predict=train_or_predict)
         elif isinstance(x_data, list):
-            return self._format_list_data(x_data, y_list=y_data)
-
-    def _format_predict_data(self, x):
-        """
-
-        :param x:
-        :return:
-        """
-        #  Do something slightly different here?
-        if isinstance(x, str):
-            logger.debug('Loading file data')
-            return self._format_file_data(x, train_or_predict='predict')
-        elif isinstance(x, pd.DataFrame):
-            logger.debug('Formatting dataframe')
-            return self._format_dataframe(x, train_or_predict='predict')
-        elif isinstance(x, list):
-            logger.debug('Formatting list data')
-            return self._format_list_data(x, train_or_predict='predict')
+            return self._format_list_data(x_data, y_list=y_data, train_or_predict=train_or_predict)
+        raise TypeError(f'Data must be [str, list, pd.DataFrame] not {type(x_data)}')
 
     @run_as_subprocess
     def _format_dataframe(self,
@@ -110,13 +82,7 @@ class PyCTR:
                           y_df=None,
                           train_or_predict='train',
                           label_name='click') -> (np.array, np.array):
-        """
-        :param x_train: X data (dataframe)
-        :param y_df: Y data (dataframe) - optional if y data is in X data already
-        :param label_name: Name of label column, not used if Y data inputted separately
-        :return:
-        """
-        x_train = x_df.copy()  # Running as subprocess so memory is freed after (df.copy is *definitely*  temporary this way)
+        # Running as subprocess so memory is freed after (df.copy is *definitely*  temporary this way)
         logger.debug('Formatting dataframe')
         if train_or_predict == 'train':
             field_map_func = self.field_map.add
@@ -127,38 +93,36 @@ class PyCTR:
         else:
             raise NameError(f'train_or_predict must be "train" or "predict" not {train_or_predict}!')
 
-        for col in [col for col in x_train.columns if col != label_name]:
-            if 'float' not in str(x_train[col].dtype):
-                x_train[col] = x_train[col].apply(lambda x: np.array([field_map_func(col), feature_map_func(x), 1 if not pd.isna(x) else 0]))
-            else:
-                x_train[col] = x_train[col].apply(lambda x: np.array([field_map_func(col), feature_map_func(x), x]))
-
-        if y_df is None and train_or_predict == 'train':
-            assert label_name in x_train.columns, f'Label column ({label_name}) must be in dataframe if y data is not passed separately!'
-            y_data = x_train[label_name].values
-            x_train.drop(columns=label_name, inplace=True)
+        if label_name in x_df.columns:
+            assert y_df is None, f'Label column ({label_name}) found in dataframe but y data was also passed!'
+            y_data = x_df[label_name].values
+            x_train = x_df.drop(columns=label_name)
         else:
             y_data = y_df
+            x_train = x_df
 
-        # x_df.rename(columns={col: self.field_map.get(col) for col in x_df.columns}, inplace=True)
-        x_data = x_train.to_numpy()
-        num_cols = len(x_data[0])
-        num_rows = len(x_data)
-        x_data = np.concatenate(np.concatenate(x_data)).reshape(num_rows, num_cols, 3)
+        num_cols = len(x_train.columns)
+        num_rows = len(x_train)
+
+        arr = np.zeros((num_rows, num_cols, 3))
+        fields = x_train.columns.values
+        dtypes = x_train.dtypes.values
+        x_data = x_train.values
+        for i in range(num_rows):
+            for j in range(num_cols):
+                if 'float' in str(dtypes[j]):
+                    arr[i, j, :] = np.array([field_map_func(fields[j]), feature_map_func(x_data[i, j]), x_data[i, j]])
+                    continue
+                arr[i, j, :] = np.array([field_map_func(fields[j]), feature_map_func(x_data[i, j]), 1])
 
         if y_data is not None:
-            return x_data, y_data
-        return x_data
+            return arr, y_data
+        return arr
 
     def _format_list_data(self,
                           x_list: list,
                           y_list: list = None,
                           train_or_predict: str = 'train') -> (np.array, np.array):
-        """
-        :param x_list: List of x data like: [(field, feature, value), (...)]
-        :param y_list: List of y data - optional if y data
-        :return:
-        """
         logger.debug('Formatting list data')
         return x_list, y_list
 
@@ -203,14 +167,8 @@ class PyCTR:
         return x_data
 
     def _train_test_split(self,
-                          x,
-                          y,
+                          x_data,
+                          y_data,
                           split_frac) -> (np.array, np.array, np.array, np.array):
-        """
-
-        :param data_in:
-        :param split_frac:
-        :return: x_train, y_train, x_test, y_test
-        """
-        split_index = int(len(x) - len(x) * split_frac)
-        return x[:split_index], y[:split_index], x[split_index:], y[split_index:]
+        split_index = int(len(x_data) - len(x_data) * split_frac)
+        return x_data[:split_index], y_data[:split_index], x_data[split_index:], y_data[split_index:]
