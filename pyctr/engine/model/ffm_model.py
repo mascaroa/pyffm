@@ -39,7 +39,6 @@ class FFMModel(BaseModel):
         return calc_phi(np.concatenate(x).reshape(len(x), 3), self.bias, self.lin_terms, self.latent_w)
 
     def predict(self, x):
-        # TODO add batch predicting here
         return logistic(self._phi(x))
 
 
