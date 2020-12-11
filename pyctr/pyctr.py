@@ -40,6 +40,17 @@ class PyCTR:
     def train(self,
               x_train: Union[str, list, pd.DataFrame],
               y_train: Union[str, list, pd.DataFrame, None] = None) -> None:
+        """
+
+            Train data must be a str (path to libffm file), a list of lists of dictionaries, or a dataframe and must contain
+            a lobel column (default 'click'), e.g.:
+            [[{'click': 1}, {'field1': 'feature1'}, {'field2', 0.83}, ...]              <- 1st row
+            [{'click': 0}, {'field2': 'feature_whatever'}, {'field17': True}, ...]]     <- 2nd row ...
+
+            OR
+
+
+        """
         assert self._check_inputs(x_train, y_train) == 0
         formatted_x_data, formatted_y_data = self._format_data(x_train, y_train)
         if not self.engine.train_quiet:
@@ -53,8 +64,13 @@ class PyCTR:
 
     def predict(self, x: Union[str, list, pd.DataFrame]) -> np.array:
         assert self._check_inputs(x) == 0
+        logger.info('Formatting predict data')
         formatted_predict_data = self._format_data(x, train_or_predict='predict')
         return self.engine.predict(formatted_predict_data)
+
+    def load_model(self, model_path):
+        # TODO: Load model from disk
+        pass
 
     def _check_inputs(self, x, y=None) -> int:
         if type(x) in [list, pd.DataFrame, str]:
@@ -97,7 +113,7 @@ class PyCTR:
             y_data = x_df[label_name].values
             x_train = x_df.drop(columns=label_name)
         else:
-            y_data = y_df
+            y_data = y_df.copy
             x_train = x_df
 
         num_cols = len(x_train.columns)
@@ -114,7 +130,7 @@ class PyCTR:
                     continue
                 arr[i, j, :] = np.array([field_map_func(fields[j]), feature_map_func(x_data[i, j]), 1])
 
-        if y_data is not None:
+        if y_data is not None and train_or_predict == 'train':
             return arr, y_data
         return arr
 
