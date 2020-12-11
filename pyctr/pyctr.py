@@ -9,7 +9,7 @@ from util import Map, run_as_subprocess
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel('INFO') # TODO: propagate logging properly from init kwargs
+logger.setLevel('INFO')  # TODO: propagate logging properly from init kwargs
 
 
 class PyCTR:
@@ -22,7 +22,6 @@ class PyCTR:
                  training_params=None,
                  io_params=None,
                  **kwargs):
-        self.log_level = kwargs.get()
 
         self.training_params = {} if training_params is None else training_params
         self.io_params = {} if io_params is None else io_params
@@ -40,7 +39,7 @@ class PyCTR:
 
     def train(self,
               x_train: Union[str, list, pd.DataFrame],
-              y_train: Union[str, list, pd.DataFrame, None] = None):
+              y_train: Union[str, list, pd.DataFrame, None] = None) -> None:
         assert self._check_inputs(x_train, y_train) == 0
         formatted_x_data, formatted_y_data = self._format_data(x_train, y_train)
         if not self.engine.train_quiet:
@@ -49,15 +48,15 @@ class PyCTR:
             self.engine.num_fields = self.field_map.max() + 1
             self.engine.num_features = self.feature_map.max() + 1
             self.engine.train(x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test)
-            return 0
+            return
         self.engine.train(x_train=formatted_x_data, y_train=formatted_y_data)
 
-    def predict(self, x: Union[str, list, pd.DataFrame]):
+    def predict(self, x: Union[str, list, pd.DataFrame]) -> np.array:
         assert self._check_inputs(x) == 0
         formatted_predict_data = self._format_data(x, train_or_predict='predict')
         return self.engine.predict(formatted_predict_data)
 
-    def _check_inputs(self, x, y=None):
+    def _check_inputs(self, x, y=None) -> int:
         if type(x) in [list, pd.DataFrame, str]:
             if y is not None and type(y) in [list, pd.DataFrame, str]:
                 return 0
