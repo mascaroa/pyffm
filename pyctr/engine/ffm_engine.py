@@ -57,14 +57,6 @@ class FFMEngine(BaseEngine):
               y_train: Union[np.array, None] = None,
               x_test: Union[np.array, None] = None,
               y_test: Union[np.array, None] = None) -> int:
-        """
-
-        :param x_train: X training data formatted as an np.array
-        :param x_test: X test data formatted the same as the train data - optional
-        :param y_train:
-        :param y_test:
-        :return: 0 if trained succesfully
-        """
         if self.model is None:
             if self.num_fields is None:  # If model size not specified, infer from train data
                 self.num_fields = max([len(row) for row in x_train])
@@ -108,8 +100,8 @@ class FFMEngine(BaseEngine):
                 logloss = calc_logloss(x_test,
                                        y_test,
                                        self.model.bias,
-                                       self.model.lin_terms.copy(),
-                                       self.model.latent_w.copy())
+                                       self.model.lin_terms,
+                                       self.model.latent_w)
                 logger.info(f'Logloss: {logloss}, \nTook {time.time() - start_time:.1f}s')
                 # Store this value in the model or engine?
 
