@@ -9,16 +9,12 @@ class BaseModel(ABC):
 
         self.use_linear = use_linear
         self.lin_terms = np.zeros(num_features) if use_linear else None
+        self.lin_grads = np.ones(num_features) if use_linear else None
 
         self.bias = 0
+        self.bias_grad = 1
 
-        self.square_grad = 0
         self._kappa = 0
-
-    @property
-    @abstractmethod
-    def kappa(self):
-        pass
 
     @abstractmethod
     def _phi(self, x):

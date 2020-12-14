@@ -1,5 +1,5 @@
 import numpy as np
-from numba import njit
+from numba import njit, numba as nb
 
 from .base_model import BaseModel
 from util import logistic
@@ -17,47 +17,42 @@ class FFMModel(BaseModel):
         self.num_latent = num_latent
         self.latent_w = np.random.rand(num_fields, num_features, num_latent) * 1 / np.sqrt(num_latent)
         self.grads = np.ones((num_fields, num_features, num_latent))
+        self.sigmoid = kwargs.get('sigmoid', True)
 
-    @property
-    def kappa(self):
-        return self._kappa
-
-    @kappa.setter
-    def kappa(self, value):
-        if isinstance(value, int):
-            self._kappa = value
-        elif isinstance(value, tuple) and len(value) == 2:
-            x, y = value
-            self._kappa = np.divide(-y, (1 + np.exp(y * self._phi(x))))
-        else:
-            raise TypeError(f'Unrecognized input for setting kappa {value}!')
+    def predict(self, x):
+        if self.sigmoid:
+            return logistic(self._phi(x))
+        return 1 if self._phi(x) > 0 else 0
 
     def _phi(self, x: np.array):
         """
         Sum over bias and linear terms + sum of products of latent vectors
         """
-        return calc_phi(np.concatenate(x).reshape(len(x), 3), self.bias, self.lin_terms, self.latent_w)
-
-    def predict(self, x):
-        return logistic(self._phi(x))
+        return calc_phi(x, self.bias, self.lin_terms, self.latent_w, 1 / (x * x).sum(axis=0)[2])
 
 
-@njit(cache=True)
+@njit
 def calc_phi(x,
              bias,
              lin_terms,
-             latent_w):
+             latent_w,
+             norm):
     phi = 0
     if bias is not None:
         phi += bias
-    if lin_terms is not None:
-        for feat in [int(val[1]) for val in x]:
-            phi += (1 / np.sqrt(2)) * lin_terms[feat]
-    for i, (field1, feat1, val1) in enumerate(x):
-        for (field2, feat2, val2) in x[i:]:
-            if val1 == 0 or val2 == 0:
+    for i in nb.prange(x.shape[0]):
+        field1, feat1, val1 = x[i]
+        if val1 == 0:
+            continue
+        if lin_terms is not None:
+            phi += np.sqrt(norm) * lin_terms[int(feat1)] * val1
+        for j in range(i + 1, x.shape[0]):
+            field2, feat2, val2 = x[j]
+            if val2 == 0:
                 continue
-            if feat1 > len(latent_w[0]) or feat2 > len(latent_w[0]):
-                continue  # Skip unknown features
-            phi += (1 / 2) * np.dot(latent_w[int(field2), int(feat1)], latent_w[int(field1), int(feat2)]) * val1 * val2
+            if feat1 > latent_w.shape[0] or feat2 > latent_w.shape[0]:
+                continue
+            factor = val1 * val2 * norm
+            for k in range(latent_w[int(field2), int(feat1)].size):
+                phi += latent_w[int(field2), int(feat1)][k] * latent_w[int(field1), int(feat2)][k] * factor
     return phi

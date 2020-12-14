@@ -75,23 +75,22 @@ class FFMEngine(BaseEngine):
         full_start = time.time()
         for epoch in range(self.epochs):
             logger.info(f'Epoch {epoch}')
-            sample_line = np.random.randint(0, len(x_train) - 1)
-            self.model.kappa = (x_train[sample_line], y_train[sample_line])
             logger.info(f'Training on {len(x_train)} rows.')
             start_time = time.time()
-            grads, lin_terms, latent_w = full_train(x_train,
-                                                    self.model.kappa,
-                                                    self.model.reg_lambda,
-                                                    self.learn_rate,
-                                                    self.model.grads,
-                                                    self.model.lin_terms,
-                                                    self.model.latent_w,
-                                                    self.model.num_latent)
+            norms = 1 / (x_train * x_train)[:, :, 2].sum(axis=1)
+            full_train(x_train,
+                       y_train,
+                       self.model.latent_w,
+                       self.model.grads,
+                       self.model.lin_terms,
+                       self.model.lin_grads,
+                       self.model.bias,
+                       self.model.bias_grad,
+                       self.model.num_latent,
+                       self.model.reg_lambda,
+                       self.learn_rate,
+                       norms)
             logger.info(f'Full train done, took {time.time() - start_time:.1f}s')
-            self.model.grads = grads
-            self.model.lin_terms = lin_terms
-            self.model.latent_w = latent_w
-            self.model.bias -= self.model.kappa * self.learn_rate
 
             # If test data entered, calc logloss
             logger.info('Calculating logloss')
@@ -109,18 +108,24 @@ class FFMEngine(BaseEngine):
         return 0
 
 
-@njit(parallel=True, cache=True)
+# @njit(parallel=True)
 def full_train(x_train,
-               kappa,
+               y_train,
+               latent_w,
+               w_grads,
+               lin_terms,
+               lin_grads,
+               bias,
+               bias_grad,
+               num_latent,
                reg_lambda,
                learn_rate,
-               grads,
-               lin_terms,
-               latent_w,
-               num_latent) -> Tuple[np.array, np.array, np.array]:
+               norms) -> int:
     g1 = np.zeros(num_latent)
     g2 = np.zeros(num_latent)
     for i in range(x_train.shape[0]):
+        sample_line = np.random.randint(0, x_train.shape[0] - 1)
+        kappa = np.divide(-y_train[i], (1 + np.exp(y_train[sample_line] * calc_phi(x_train[sample_line], bias, lin_terms, latent_w, norms[sample_line]))))
         for j_1 in nb.prange(x_train.shape[1]):
             x_1 = x_train[i, j_1]
 
@@ -128,21 +133,25 @@ def full_train(x_train,
                 continue
 
             if lin_terms is not None:
-                lin_terms[int(x_1[1])] -= learn_rate * (reg_lambda * lin_terms[int(x_1[1])] + kappa * x_1[2] * (1 / np.sqrt(2)))
+                gl = reg_lambda * lin_terms[int(x_1[1])] + kappa * x_1[2] * np.sqrt(norms[i])
+                lin_grads[int(x_1[1])] += gl * gl
+                lin_terms[int(x_1[1])] -= learn_rate * gl / np.sqrt(lin_grads[int(x_1[1])])
 
             for j_2 in range(j_1 + 1, x_train.shape[1]):
                 x_2 = x_train[i, j_2]
-                factor = x_1[2] * x_2[2] * kappa
+
+                factor = x_1[2] * x_2[2] * kappa * norms[i]
                 for k in range(num_latent):  # This is faster than broadcasting for some reason
                     g1[k] = reg_lambda * latent_w[int(x_1[0]), int(x_2[1])][k] + factor * latent_w[int(x_2[0]), int(x_1[1])][k]
                     g2[k] = reg_lambda * latent_w[int(x_2[0]), int(x_1[1])][k] + factor * latent_w[int(x_1[0]), int(x_2[1])][k]
-                grads[int(x_1[0]), int(x_2[1])] += g1 * g1
-                grads[int(x_2[0]), int(x_1[1])] += g2 * g2
+                w_grads[int(x_1[0]), int(x_2[1])] += g1 * g1
+                w_grads[int(x_2[0]), int(x_1[1])] += g2 * g2
 
-                latent_w[int(x_1[0]), int(x_2[1])] -= learn_rate * g1 / np.sqrt(grads[int(x_1[0]), int(x_2[1])])
-                latent_w[int(x_2[0]), int(x_1[1])] -= learn_rate * g2 / np.sqrt(grads[int(x_2[0]), int(x_1[1])])
-
-    return grads, lin_terms, latent_w
+                latent_w[int(x_1[0]), int(x_2[1])] -= learn_rate * g1 / np.sqrt(w_grads[int(x_1[0]), int(x_2[1])])
+                latent_w[int(x_2[0]), int(x_1[1])] -= learn_rate * g2 / np.sqrt(w_grads[int(x_2[0]), int(x_1[1])])
+        bias_grad += kappa ** 2
+        bias -= learn_rate * kappa / np.sqrt(bias_grad)
+    return 0
 
 
 @njit(parallel=True, cache=True)
@@ -153,6 +162,7 @@ def calc_logloss(x_test,
                  latent_w):
     logloss = 0
     for i in nb.prange(len(x_test)):
-        logloss += np.log(1 + np.exp(-y_test[i] * calc_phi(x_test[i], bias, lin_terms, latent_w)))
+        norm = 1 / x_test[i].sum(axis=0)[2]
+        logloss += np.log(1 + np.exp(-y_test[i] * calc_phi(x_test[i], bias, lin_terms, latent_w, norm)))
     logloss = logloss / len(x_test)
     return logloss
