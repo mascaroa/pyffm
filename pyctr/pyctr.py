@@ -177,7 +177,7 @@ class PyCTR:
             if len(x_data[i]) < num_cols:
                 x_data[i] = np.vstack((x_data[i], [np.array([0, 0, 0]) for j in range(len(x_data[i]), num_cols)]))
         x_data = np.concatenate(np.concatenate(x_data)).reshape(num_rows, num_cols, 3)
-        if y_data is not None:
+        if y_data is not None and train_or_predict == 'train':
             return x_data, np.concatenate(y_data)
         return x_data
 
