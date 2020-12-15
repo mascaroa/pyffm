@@ -108,7 +108,7 @@ class FFMEngine(BaseEngine):
         return 0
 
 
-# @njit(parallel=True)
+@njit(parallel=True)
 def full_train(x_train,
                y_train,
                latent_w,
@@ -123,9 +123,10 @@ def full_train(x_train,
                norms) -> int:
     g1 = np.zeros(num_latent)
     g2 = np.zeros(num_latent)
-    for i in range(x_train.shape[0]):
-        sample_line = np.random.randint(0, x_train.shape[0] - 1)
-        kappa = np.divide(-y_train[i], (1 + np.exp(y_train[sample_line] * calc_phi(x_train[sample_line], bias, lin_terms, latent_w, norms[sample_line]))))
+    indices = np.arange(x_train.shape[0])
+    np.random.shuffle(indices)
+    for i in indices:
+        kappa = np.divide(-y_train[i], (1 + np.exp(y_train[i] * calc_phi(x_train[i], bias, lin_terms, latent_w, norms[i]))))
         for j_1 in nb.prange(x_train.shape[1]):
             x_1 = x_train[i, j_1]
 

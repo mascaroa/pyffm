@@ -50,7 +50,7 @@ def calc_phi(x,
             field2, feat2, val2 = x[j]
             if val2 == 0:
                 continue
-            if feat1 > latent_w.shape[0] or feat2 > latent_w.shape[0]:
+            if feat1 > latent_w.shape[1] or feat2 > latent_w.shape[1]:
                 continue
             factor = val1 * val2 * norm
             for k in range(latent_w[int(field2), int(feat1)].size):
