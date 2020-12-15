@@ -102,7 +102,12 @@ class FFMEngine(BaseEngine):
                                        self.model.lin_terms,
                                        self.model.latent_w)
                 logger.info(f'Logloss: {logloss}, \nTook {time.time() - start_time:.1f}s')
-                # Store this value in the model or engine?
+                if self.best_loss is None or logloss < self.best_loss:
+                    self.best_loss = logloss
+                    self.best_loss_epoch = epoch
+                elif logloss > self.best_loss and self.early_stop:
+                    logger.info(f'Increasing loss detected, early stopping')
+                break
 
         logger.info(f'Training done, took {time.time() - full_start:.1f}s')
         return 0
@@ -121,6 +126,9 @@ def full_train(x_train,
                reg_lambda,
                learn_rate,
                norms) -> int:
+    """
+        Run one full training epoch while updating model params
+    """
     g1 = np.zeros(num_latent)
     g2 = np.zeros(num_latent)
     indices = np.arange(x_train.shape[0])
@@ -128,28 +136,28 @@ def full_train(x_train,
     for i in indices:
         kappa = np.divide(-y_train[i], (1 + np.exp(y_train[i] * calc_phi(x_train[i], bias, lin_terms, latent_w, norms[i]))))
         for j_1 in nb.prange(x_train.shape[1]):
-            x_1 = x_train[i, j_1]
+            field1, feat1, val1 = x_train[i, j_1]
 
-            if x_1[2] == 0:
+            if val1 == 0:
                 continue
 
             if lin_terms is not None:
-                gl = reg_lambda * lin_terms[int(x_1[1])] + kappa * x_1[2] * np.sqrt(norms[i])
-                lin_grads[int(x_1[1])] += gl * gl
-                lin_terms[int(x_1[1])] -= learn_rate * gl / np.sqrt(lin_grads[int(x_1[1])])
+                gl = reg_lambda * lin_terms[int(feat1)] + kappa * val1 * np.sqrt(norms[i])
+                lin_grads[int(feat1)] += gl * gl
+                lin_terms[int(feat1)] -= learn_rate * gl / np.sqrt(lin_grads[int(feat1)])
 
             for j_2 in range(j_1 + 1, x_train.shape[1]):
-                x_2 = x_train[i, j_2]
+                field2, feat2, val2 = x_train[i, j_2]
 
-                factor = x_1[2] * x_2[2] * kappa * norms[i]
+                factor = val1 * val2 * kappa * norms[i]
                 for k in range(num_latent):  # This is faster than broadcasting for some reason
-                    g1[k] = reg_lambda * latent_w[int(x_1[0]), int(x_2[1])][k] + factor * latent_w[int(x_2[0]), int(x_1[1])][k]
-                    g2[k] = reg_lambda * latent_w[int(x_2[0]), int(x_1[1])][k] + factor * latent_w[int(x_1[0]), int(x_2[1])][k]
-                w_grads[int(x_1[0]), int(x_2[1])] += g1 * g1
-                w_grads[int(x_2[0]), int(x_1[1])] += g2 * g2
+                    g1[k] = reg_lambda * latent_w[int(field1), int(feat2)][k] + factor * latent_w[int(field2), int(feat1)][k]
+                    g2[k] = reg_lambda * latent_w[int(field2), int(feat1)][k] + factor * latent_w[int(field1), int(feat2)][k]
+                w_grads[int(field1), int(feat2)] += g1 * g1
+                w_grads[int(field2), int(feat1)] += g2 * g2
 
-                latent_w[int(x_1[0]), int(x_2[1])] -= learn_rate * g1 / np.sqrt(w_grads[int(x_1[0]), int(x_2[1])])
-                latent_w[int(x_2[0]), int(x_1[1])] -= learn_rate * g2 / np.sqrt(w_grads[int(x_2[0]), int(x_1[1])])
+                latent_w[int(field1), int(feat2)] -= learn_rate * g1 / np.sqrt(w_grads[int(field1), int(feat2)])
+                latent_w[int(field2), int(feat1)] -= learn_rate * g2 / np.sqrt(w_grads[int(field2), int(feat1)])
         bias_grad += kappa * kappa
         bias -= learn_rate * kappa / np.sqrt(bias_grad)
     return 0

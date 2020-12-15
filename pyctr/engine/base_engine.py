@@ -7,10 +7,15 @@ class BaseEngine(ABC):
         self.epochs = training_params.pop('epochs', 10)
         self.learn_rate = training_params.pop('learn_rate', 0.2)
         self.train_quiet = training_params.pop('quiet', False)
+        self.early_stop = training_params.pop('early_stop', False)
 
         self._training_params = training_params
-        self._training_params['reg_lambda'] = 0.0002 if 'reg_lambda' not in training_params else training_params['reg_lambda']
+        self._training_params['reg_lambda'] = 0.002 if 'reg_lambda' not in training_params else training_params['reg_lambda']
         self._training_params['num_latent'] = 4 if 'num_latent' not in training_params else training_params['num_latent']
+        self._training_params['sigmoid'] = False if 'sigmoid' not in training_params else training_params['sigmoid']
+
+        self.best_loss = None
+        self.best_loss_epoch = None
 
     @abstractmethod
     def create_model(self, *args, **kwargs):

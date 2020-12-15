@@ -14,8 +14,6 @@ class BaseModel(ABC):
         self.bias = 0
         self.bias_grad = 1
 
-        self._kappa = 0
-
     @abstractmethod
     def _phi(self, x):
         pass

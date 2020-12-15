@@ -7,10 +7,13 @@ from .base_engine import BaseEngine
 from .model.fm_model import FMModel
 
 logger = logging.getLogger(__name__)
+logger.setLevel('INFO')
+
 
 # TODO: rewrite using numba
 class FMEngine(BaseEngine):
     def __init__(self, training_params):
+        logger.info(f'Initializing FM Engine with inputs {training_params}')
         super().__init__(training_params)
 
     def create_model(self,
