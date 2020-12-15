@@ -150,7 +150,7 @@ def full_train(x_train,
 
                 latent_w[int(x_1[0]), int(x_2[1])] -= learn_rate * g1 / np.sqrt(w_grads[int(x_1[0]), int(x_2[1])])
                 latent_w[int(x_2[0]), int(x_1[1])] -= learn_rate * g2 / np.sqrt(w_grads[int(x_2[0]), int(x_1[1])])
-        bias_grad += kappa ** 2
+        bias_grad += kappa * kappa
         bias -= learn_rate * kappa / np.sqrt(bias_grad)
     return 0
 
