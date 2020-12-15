@@ -9,7 +9,7 @@ from util import Map, run_as_subprocess
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel('INFO')  # TODO: propagate logging properly from init kwargs
+logger.setLevel('INFO')
 
 
 class PyCTR:
@@ -26,8 +26,6 @@ class PyCTR:
         self.training_params = {} if training_params is None else training_params
         self.io_params = {} if io_params is None else io_params
 
-        self.train_from_file = self.io_params.get('train_from_file', False)
-        self.predict_from_file = self.io_params.get('train_from_file', False)
         self.model = 'ffm' if model is None else model
 
         if self.model not in EngineFactory:
@@ -36,6 +34,9 @@ class PyCTR:
         self.engine = EngineFactory[self.model](training_params=self.training_params)
         self.feature_map = Map()
         self.field_map = Map()
+
+        if len(kwargs):
+            logger.warning(f'Unknown keyword args: {kwargs.keys()}')
 
     def train(self,
               x_train: Union[str, list, pd.DataFrame],
@@ -49,7 +50,7 @@ class PyCTR:
 
             OR
 
-
+            TODO: finish docs here
         """
         assert self._check_inputs(x_train, y_train) == 0
         formatted_x_data, formatted_y_data = self._format_data(x_train, y_train)

@@ -17,7 +17,7 @@ class FFMModel(BaseModel):
         self.num_latent = num_latent
         self.latent_w = np.random.rand(num_fields, num_features, num_latent) * 1 / np.sqrt(num_latent)
         self.grads = np.ones((num_fields, num_features, num_latent))
-        self.sigmoid = kwargs.get('sigmoid', True)
+        self.sigmoid = kwargs.get('sigmoid', False)
 
     def predict(self, x):
         if self.sigmoid:
@@ -25,9 +25,6 @@ class FFMModel(BaseModel):
         return 1 if self._phi(x) > 0 else 0
 
     def _phi(self, x: np.array):
-        """
-        Sum over bias and linear terms + sum of products of latent vectors
-        """
         return calc_phi(x, self.bias, self.lin_terms, self.latent_w, 1 / (x * x).sum(axis=0)[2])
 
 
@@ -37,10 +34,13 @@ def calc_phi(x,
              lin_terms,
              latent_w,
              norm):
+    """
+        Sum over bias and linear terms + sum of products of latent vectors
+    """
     phi = 0
     if bias is not None:
         phi += bias
-    for i in nb.prange(x.shape[0]):
+    for i in range(x.shape[0]):
         field1, feat1, val1 = x[i]
         if val1 == 0:
             continue
