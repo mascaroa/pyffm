@@ -165,8 +165,13 @@ class PyCTR:
                     break
                 if len(line.split(':')[0].split(' ')) > 1:  # Click values present, parse y data as well
                     y_data.append(np.array([int(line.replace('\n', '').split(' ')[0])]))
-                features = np.array([np.array([int(field_map_func(val.split(':')[0])), int(feature_map_func(val.split(':')[1])), float(val.split(':')[2])]) for val in line.replace('\n', '').split(' ')[1:]])
-                x_data.append(features)
+                features = []
+                for val in line.replace('\n', '').split(' ')[1:]:
+                    try:
+                        features.append(np.array([int(field_map_func(val.split(':')[0])), int(feature_map_func(val.split(':')[1])), float(val.split(':')[2])]))
+                    except TypeError:  # TypeError thrown when field/featuremap get returns None (unknown field/feature)
+                        continue
+                x_data.append(np.array(features))
 
         num_cols = max([len(row) for row in x_data])
         num_rows = len(x_data)
