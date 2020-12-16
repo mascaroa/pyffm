@@ -165,7 +165,7 @@ class PyCTR:
                 if not line:
                     break
                 if len(line.split(':')[0].split(' ')) > 1:  # Click values present, parse y data as well
-                    y_data.append(np.array([int(line.replace('\n', '').split(' ')[0])]))
+                    y_data.append(np.array([-1 if int(line.replace('\n', '').split(' ')[0]) == 0 else 1]))
                 features = []
                 for val in line.replace('\n', '').split(' ')[1:]:
                     try:
