@@ -78,18 +78,18 @@ class FFMEngine(BaseEngine):
             logger.info(f'Training on {len(x_train)} rows.')
             start_time = time.time()
             norms = 1 / (x_train * x_train)[:, :, 2].sum(axis=1)
-            full_train(x_train,
-                       y_train,
-                       self.model.latent_w,
-                       self.model.grads,
-                       self.model.lin_terms,
-                       self.model.lin_grads,
-                       self.model.bias,
-                       self.model.bias_grad,
-                       self.model.num_latent,
-                       self.model.reg_lambda,
-                       self.learn_rate,
-                       norms)
+            self.model.bias, self.model.bias_grad = full_train(x_train,
+                                                               y_train,
+                                                               self.model.latent_w,
+                                                               self.model.grads,
+                                                               self.model.lin_terms,
+                                                               self.model.lin_grads,
+                                                               self.model.bias,
+                                                               self.model.bias_grad,
+                                                               self.model.num_latent,
+                                                               self.model.reg_lambda,
+                                                               self.learn_rate,
+                                                               norms)
             logger.info(f'Full train done, took {time.time() - start_time:.1f}s')
 
             # If test data entered, calc logloss
@@ -107,7 +107,7 @@ class FFMEngine(BaseEngine):
                     self.best_loss_epoch = epoch
                 elif logloss > self.best_loss and self.early_stop:
                     logger.info(f'Increasing loss detected, early stopping')
-                break
+                    break
 
         logger.info(f'Training done, took {time.time() - full_start:.1f}s')
         return 0
@@ -125,7 +125,7 @@ def full_train(x_train,
                num_latent,
                reg_lambda,
                learn_rate,
-               norms) -> int:
+               norms) -> [int, int]:
     """
         Run one full training epoch while updating model params
     """
@@ -160,7 +160,7 @@ def full_train(x_train,
                 latent_w[int(field2), int(feat1)] -= learn_rate * g2 / np.sqrt(w_grads[int(field2), int(feat1)])
         bias_grad += kappa * kappa
         bias -= learn_rate * kappa / np.sqrt(bias_grad)
-    return 0
+    return bias, bias_grad
 
 
 @njit(parallel=True, cache=True)
