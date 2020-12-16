@@ -13,11 +13,14 @@ class FFMModel(BaseModel):
                  reg_lambda,
                  use_linear=True,
                  **kwargs):
-        super().__init__(num_features=num_features, reg_lambda=reg_lambda, use_linear=use_linear)
+        super().__init__(num_features=num_features,
+                         reg_lambda=reg_lambda,
+                         use_linear=use_linear,
+                         sigmoid=kwargs.get('sigmoid', False))
         self.num_latent = num_latent
-        self.latent_w = np.random.rand(num_fields, num_features, num_latent) * 1 / np.sqrt(num_latent)
         self.grads = np.ones((num_fields, num_features, num_latent))
-        self.sigmoid = kwargs.get('sigmoid', False)
+        np.random.seed(42)  # Not thread safe, but it's only used here
+        self.latent_w = np.random.rand(num_fields, num_features, num_latent) * 1 / np.sqrt(num_latent)
 
     def predict(self, x):
         if self.sigmoid:

@@ -120,20 +120,23 @@ class PyCTR:
         num_cols = len(x_train.columns)
         num_rows = len(x_train)
 
-        arr = np.zeros((num_rows, num_cols, 3))
+        x_arr = np.zeros((num_rows, num_cols, 3))
         fields = x_train.columns.values
         dtypes = x_train.dtypes.values
         x_data = x_train.values
         for i in range(num_rows):
             for j in range(num_cols):
                 if 'float' in str(dtypes[j]):
-                    arr[i, j, :] = np.array([field_map_func(fields[j]), feature_map_func(x_data[i, j]), x_data[i, j]])
+                    x_arr[i, j, :] = [field_map_func(fields[j]), feature_map_func(x_data[i, j]), x_data[i, j]]
                     continue
-                arr[i, j, :] = np.array([field_map_func(fields[j]), feature_map_func(x_data[i, j]), 1])
+                x_arr[i, j, :] = [field_map_func(fields[j]), feature_map_func(x_data[i, j]), 1]
+
+        if y_data.min() == 0 and y_data.max() == 1:
+            y_data = -1 + y_data * 2
 
         if y_data is not None and train_or_predict == 'train':
-            return arr, y_data
-        return arr
+            return x_arr, y_data
+        return x_arr
 
     def _format_list_data(self,
                           x_list: list,

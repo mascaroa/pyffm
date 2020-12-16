@@ -4,7 +4,13 @@ import numpy as np
 
 
 class BaseModel(ABC):
-    def __init__(self, num_features, reg_lambda, use_linear):
+    def __init__(self,
+                 num_features,
+                 reg_lambda,
+                 use_linear,
+                 sigmoid):
+        self.sigmoid = sigmoid
+
         self.reg_lambda = reg_lambda
 
         self.use_linear = use_linear

@@ -78,18 +78,20 @@ class FFMEngine(BaseEngine):
             logger.info(f'Training on {len(x_train)} rows.')
             start_time = time.time()
             norms = 1 / (x_train * x_train)[:, :, 2].sum(axis=1)
-            self.model.bias, self.model.bias_grad = full_train(x_train,
-                                                               y_train,
-                                                               self.model.latent_w,
-                                                               self.model.grads,
-                                                               self.model.lin_terms,
-                                                               self.model.lin_grads,
-                                                               self.model.bias,
-                                                               self.model.bias_grad,
-                                                               self.model.num_latent,
-                                                               self.model.reg_lambda,
-                                                               self.learn_rate,
-                                                               norms)
+            globals()['parallel'] = self.parallel  # Need to use globals so numba can cache the jitted func
+            globals()['prange_func'] = nb.prange if parallel else range
+            self.model.bias, self.model.bias_grad = run_epoch(x_train,
+                                                              y_train,
+                                                              self.model.latent_w,
+                                                              self.model.grads,
+                                                              self.model.lin_terms,
+                                                              self.model.lin_grads,
+                                                              self.model.bias,
+                                                              self.model.bias_grad,
+                                                              self.model.num_latent,
+                                                              self.model.reg_lambda,
+                                                              self.learn_rate,
+                                                              norms)
             logger.info(f'Full train done, took {time.time() - start_time:.1f}s')
 
             # If test data entered, calc logloss
@@ -113,54 +115,62 @@ class FFMEngine(BaseEngine):
         return 0
 
 
-@njit(parallel=True)
-def full_train(x_train,
-               y_train,
-               latent_w,
-               w_grads,
-               lin_terms,
-               lin_grads,
-               bias,
-               bias_grad,
-               num_latent,
-               reg_lambda,
-               learn_rate,
-               norms) -> [int, int]:
+def run_epoch(*args, **kwargs):
     """
-        Run one full training epoch while updating model params
+        Output is non-deterministic if done in parallel,
+        so provide it as an input option (much slower w/o parallel)
     """
-    g1 = np.zeros(num_latent)
-    g2 = np.zeros(num_latent)
-    indices = np.arange(x_train.shape[0])
-    np.random.shuffle(indices)
-    for i in indices:
-        kappa = np.divide(-y_train[i], (1 + np.exp(y_train[i] * calc_phi(x_train[i], bias, lin_terms, latent_w, norms[i]))))
-        for j_1 in nb.prange(x_train.shape[1]):
-            field1, feat1, val1 = x_train[i, j_1]
+    global parallel
+    global prange_func
 
-            if val1 == 0:
-                continue
+    @njit(parallel=parallel, cache=True)
+    def full_train(x_train,
+                   y_train,
+                   latent_w,
+                   w_grads,
+                   lin_terms,
+                   lin_grads,
+                   bias,
+                   bias_grad,
+                   num_latent,
+                   reg_lambda,
+                   learn_rate,
+                   norms) -> [int, int]:
+        """
+            Run one full training epoch while updating model params
+        """
+        g1 = np.zeros(num_latent)
+        g2 = np.zeros(num_latent)
+        for i in np.arange(x_train.shape[0]):
+            kappa = np.divide(-y_train[i], (1 + np.exp(y_train[i] * calc_phi(x_train[i], bias, lin_terms, latent_w, norms[i]))))
+            for j_1 in prange_func(x_train.shape[1]):
+                field1, feat1, val1 = x_train[i, j_1]
 
-            if lin_terms is not None:
-                gl = reg_lambda * lin_terms[int(feat1)] + kappa * val1 * np.sqrt(norms[i])
-                lin_grads[int(feat1)] += gl * gl
-                lin_terms[int(feat1)] -= learn_rate * gl / np.sqrt(lin_grads[int(feat1)])
+                if val1 == 0:
+                    continue
 
-            for j_2 in range(j_1 + 1, x_train.shape[1]):
-                field2, feat2, val2 = x_train[i, j_2]
+                if lin_terms is not None:
+                    gl = reg_lambda * lin_terms[int(feat1)] + kappa * val1 * np.sqrt(norms[i])
+                    lin_grads[int(feat1)] += gl * gl
+                    lin_terms[int(feat1)] -= learn_rate * gl / np.sqrt(lin_grads[int(feat1)])
 
-                factor = val1 * val2 * kappa * norms[i]
-                for k in range(num_latent):  # This is faster than broadcasting for some reason
-                    g1[k] = reg_lambda * latent_w[int(field1), int(feat2)][k] + factor * latent_w[int(field2), int(feat1)][k]
-                    g2[k] = reg_lambda * latent_w[int(field2), int(feat1)][k] + factor * latent_w[int(field1), int(feat2)][k]
-                w_grads[int(field1), int(feat2)] += g1 * g1
-                w_grads[int(field2), int(feat1)] += g2 * g2
+                for j_2 in range(j_1 + 1, x_train.shape[1]):
+                    field2, feat2, val2 = x_train[i, j_2]
 
-                latent_w[int(field1), int(feat2)] -= learn_rate * g1 / np.sqrt(w_grads[int(field1), int(feat2)])
-                latent_w[int(field2), int(feat1)] -= learn_rate * g2 / np.sqrt(w_grads[int(field2), int(feat1)])
-        bias_grad += kappa * kappa
-        bias -= learn_rate * kappa / np.sqrt(bias_grad)
-    return bias, bias_grad
+                    factor = val1 * val2 * kappa * norms[i]
+                    for k in range(num_latent):  # This is faster than broadcasting for some reason
+                        g1[k] = reg_lambda * latent_w[int(field1), int(feat2)][k] + factor * latent_w[int(field2), int(feat1)][k]
+                        g2[k] = reg_lambda * latent_w[int(field2), int(feat1)][k] + factor * latent_w[int(field1), int(feat2)][k]
+                    w_grads[int(field1), int(feat2)] += g1 * g1
+                    w_grads[int(field2), int(feat1)] += g2 * g2
+
+                    latent_w[int(field1), int(feat2)] -= learn_rate * g1 / np.sqrt(w_grads[int(field1), int(feat2)])
+                    latent_w[int(field2), int(feat1)] -= learn_rate * g2 / np.sqrt(w_grads[int(field2), int(feat1)])
+            bias_grad += kappa * kappa
+            bias -= learn_rate * kappa / np.sqrt(bias_grad)
+        return bias, bias_grad
+
+    return full_train(*args, **kwargs)
 
 
 @njit(parallel=True, cache=True)
