@@ -59,7 +59,7 @@ class FFMEngine(BaseEngine):
               y_test: Union[np.array, None] = None) -> int:
         if self.model is None:
             if self.num_fields is None:  # If model size not specified, infer from train data
-                self.num_fields = int(max([val[0] for row in x_train for val in row[1:]]))
+                self.num_fields = int(max([val[0] for row in x_train for val in row[1:]])) + 1
             if self.num_features is None:
                 self.num_features = int(max([val[1] for row in x_train for val in row[1:]])) + 1
 
