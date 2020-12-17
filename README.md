@@ -31,3 +31,10 @@ preds = pyffm.predict(df_in)
 
 
 ```
+
+Sample data from:
+https://github.com/ycjuan/libffm
+
+Created using the algorithm described in the original paper:
+https://www.csie.ntu.edu.tw/~cjlin/papers/ffm.pdf
+
