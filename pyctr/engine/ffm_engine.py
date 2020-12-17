@@ -108,7 +108,7 @@ class FFMEngine(BaseEngine):
                     self.best_loss = logloss
                     self.best_loss_epoch = epoch
                 elif logloss > self.best_loss and self.early_stop:
-                    logger.info(f'Increasing loss detected, early stopping')
+                    logger.info(f'Increasing loss detected, early stopping')  # TODO: do the rerun thing here
                     break
 
         logger.info(f'Training done, took {time.time() - full_start:.1f}s')
