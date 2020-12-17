@@ -21,7 +21,7 @@ class TestCTREngine(unittest.TestCase):
         self.assertTrue(np.allclose(test_preds, preds[:10]))
 
     def test_train_from_datafraome(self):
-        training_params = {'epoch': 10, 'reg_lambda': 0.002, 'sigmoid': True, 'parallel': True}
+        training_params = {'epoch': 2, 'reg_lambda': 0.002, 'sigmoid': True, 'parallel': True}
         pyffm = PyFFM(model="ffm", training_params=training_params)
 
         file_path = os.path.join(os.getcwd(), 'sample_df_train.csv')
