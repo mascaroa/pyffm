@@ -114,7 +114,7 @@ class PyCTR:
             y_data = x_df[label_name].values
             x_train = x_df.drop(columns=label_name)
         else:
-            y_data = y_df.copy
+            y_data = y_df.copy if y_df is not None else y_df
             x_train = x_df
 
         num_cols = len(x_train.columns)
@@ -131,10 +131,9 @@ class PyCTR:
                     continue
                 x_arr[i, j, :] = [field_map_func(fields[j]), feature_map_func(x_data[i, j]), 1]
 
-        if y_data.min() == 0 and y_data.max() == 1:
-            y_data = -1 + y_data * 2
-
         if y_data is not None and train_or_predict == 'train':
+            if y_data.min() == 0 and y_data.max() == 1:
+                y_data = -1 + y_data * 2
             return x_arr, y_data
         return x_arr
 
