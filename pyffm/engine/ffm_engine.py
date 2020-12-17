@@ -64,7 +64,9 @@ class FFMEngine(BaseEngine):
                 self.num_features = int(max([val[1] for row in x_train for val in row[1:]])) + 1
 
             logger.info(f'Creating ffm model with {self.num_fields} fields and {self.num_features} features.')
-            self.create_model(num_fields=self.num_fields, num_features=self.num_features, **self._training_params)
+            self.create_model(num_fields=self.num_fields,
+                              num_features=self.num_features,
+                              **self._training_params)
 
         if type(x_train).__module__ != np.__name__:
             raise TypeError('x data must be an np array!')
