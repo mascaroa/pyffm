@@ -8,6 +8,11 @@ def logistic(x):
 
 
 class Map:
+    """
+        Inspired by Kevin Stokely's work:
+        https://github.com/kcstokely/kctools/blob/master/kctools/classes/map.py
+    """
+
     def __init__(self):
         self._map_dict = {}
         self._counter = 0
