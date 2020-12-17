@@ -59,9 +59,9 @@ class FFMEngine(BaseEngine):
               y_test: Union[np.array, None] = None) -> int:
         if self.model is None:
             if self.num_fields is None:  # If model size not specified, infer from train data
-                self.num_fields = max([len(row) for row in x_train])
+                self.num_fields = int(max([val[0] for row in x_train for val in row[1:]]))
             if self.num_features is None:
-                self.num_features = max([val[0] for row in x_train for val in row[1:]]) + 1
+                self.num_features = int(max([val[1] for row in x_train for val in row[1:]])) + 1
 
             logger.info(f'Creating ffm model with {self.num_fields} fields and {self.num_features} features.')
             self.create_model(num_fields=self.num_fields, num_features=self.num_features, **self._training_params)
