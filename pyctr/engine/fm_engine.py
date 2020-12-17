@@ -26,22 +26,15 @@ class FMEngine(BaseEngine):
               y_train: Union[np.array, None] = None,
               x_test: Union[np.array, None] = None,
               y_test: Union[np.array, None] = None) -> int:
-        """
-
-        :param x_train: X training data formatted as an np.array
-        :param x_test: X test data formatted the same as the train data - optional
-        :param y_train:
-        :param y_test:
-        :return: 0 if trained succesfully
-        """
         if self.model is None:
             num_features = max([val[1] for row in x_train for val in row[1:]]) + 1
             self.create_model(num_features=num_features, **self._training_params)
-        if not isinstance(x_train, list):
-            raise TypeError('x data must be a list data rows!')
 
-        if isinstance(x_train[0], int) or isinstance(x_train[0], tuple):
-            x_train = [x_train]
+        if type(x_train).__module__ != np.__name__:
+            raise TypeError('x data must be an np array!')
+
+        if x_test is not None and type(x_test).__module__ != np.__name__:
+            raise TypeError('x data must be an np array!')
 
         for epoch in self.epochs:
             logger.info(f'Epoch {epoch}')
