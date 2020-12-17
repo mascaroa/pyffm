@@ -1,6 +1,8 @@
 import numpy as np
+from numba import njit
 
 
+@njit(cache=True)
 def logistic(x):
     return np.divide(1, (1 + np.exp(-x)))
 
