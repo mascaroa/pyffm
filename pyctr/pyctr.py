@@ -143,6 +143,7 @@ class PyCTR:
                           y_list: list = None,
                           train_or_predict: str = 'train') -> (np.array, np.array):
         logger.debug('Formatting list data')
+        # TODO: list input formatting
         return x_list, y_list
 
     def _format_file_data(self,
@@ -168,7 +169,7 @@ class PyCTR:
                 if not line:
                     break
                 if len(line.split(':')[0].split(' ')) > 1:  # Click values present, parse y data as well
-                    y_data.append(np.array([-1 if int(line.replace('\n', '').split(' ')[0]) == 0 else 1]))
+                    y_data.append([int(line.replace('\n', '').split(' ')[0])])
                 features = []
                 for val in line.replace('\n', '').split(' ')[1:]:
                     try:
@@ -187,7 +188,10 @@ class PyCTR:
                 x_data[i] = np.vstack((x_data[i], [np.array([0, 0, 0]) for j in range(len(x_data[i]), num_cols)]))
         x_data = np.concatenate(np.concatenate(x_data)).reshape(num_rows, num_cols, 3)
         if y_data is not None and train_or_predict == 'train':
-            return x_data, np.concatenate(y_data)
+            y_data = np.concatenate(y_data)
+            if y_data.min() == 0 and y_data.max() == 1:
+                y_data = -1 + y_data * 2
+            return x_data, y_data
         return x_data
 
     def _train_test_split(self,
