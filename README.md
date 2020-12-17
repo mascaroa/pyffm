@@ -21,8 +21,7 @@ pyffm = PyFFM(model="ffm", training_params=training_params)
 
 file_path = 'path/to/csv/file'
 df_in = pd.read_csv(file_path)
-# Make sure your file has a label column, default name is 'click' but you can either
-# rename it or pass in label
+# Make sure your file has a label column, default name is 'click' but you can either rename it or pass in label
 df_in.rename(columns={'label': 'click'}, inplace=True)
 
 pyffm.train(df_in)
