@@ -38,9 +38,11 @@ preds = pyffm.predict(predict_data.drop(columns='click'))
 
 ```
 
-Sample data from:
-https://github.com/ycjuan/libffm
+Sample data from:  
+https://github.com/ycjuan/libffm  
+and:  
+https://www.kaggle.com/c/criteo-display-ad-challenge
 
-Created using the algorithm described in the original paper:
+Created using the algorithm described in the original paper:  
 https://www.csie.ntu.edu.tw/~cjlin/papers/ffm.pdf
 
