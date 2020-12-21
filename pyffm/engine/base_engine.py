@@ -30,3 +30,7 @@ class BaseEngine(ABC):
     @abstractmethod
     def predict(self, x):
         pass
+
+    @abstractmethod
+    def set_log_level(self, log_level):
+        pass

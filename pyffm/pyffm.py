@@ -9,7 +9,6 @@ from util import Map
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel('INFO')
 
 
 class PyFFM:
@@ -34,6 +33,8 @@ class PyFFM:
         self.engine = EngineFactory[self.model](training_params=self.training_params)
         self.feature_map = Map()
         self.field_map = Map()
+
+        self.set_log_level(kwargs.pop('log_level', 'INFO'))
 
         if len(kwargs):
             logger.warning(f'Unknown keyword args: {kwargs.keys()}')
@@ -68,9 +69,9 @@ class PyFFM:
                               y_train=y_train,
                               x_test=x_test,
                               y_test=y_test)
-            return
-        self.engine.train(x_train=formatted_x_data,
-                          y_train=formatted_y_data)
+        else:
+            self.engine.train(x_train=formatted_x_data,
+                              y_train=formatted_y_data)
 
     def predict(self, x: Union[str, list, pd.DataFrame],
                 label_name: str = 'click') -> np.array:
@@ -159,7 +160,15 @@ class PyFFM:
                           train_or_predict: str = 'train',
                           label_name='click') -> (np.array, np.array):
         logger.debug('Formatting list data')
-        # TODO: list input formatting
+        if train_or_predict == 'train':
+            field_map_func = self.field_map.add
+            feature_map_func = self.feature_map.add
+        elif train_or_predict == 'predict':
+            field_map_func = self.field_map.get
+            feature_map_func = self.feature_map.get
+        else:
+            raise NameError(f'train_or_predict must be "train" or "predict" not {train_or_predict}!')
+
         return x_list, y_list
 
     def _format_file_data(self,
@@ -217,3 +226,9 @@ class PyFFM:
                           split_frac) -> (np.array, np.array, np.array, np.array):
         split_index = int(len(x_data) - len(x_data) * split_frac)
         return x_data[:split_index], y_data[:split_index], x_data[split_index:], y_data[split_index:]
+
+    def set_log_level(self, log_level: str):
+        if log_level.upper() not in ['DEBUG', 'INFO', 'WARNING', 'ERROR']:
+            logger.error(f'Log level must be DEBUG, INFO, WARNING, ERROR not {log_level}')
+        logger.setLevel(log_level)
+        self.engine.set_log_level(log_level)

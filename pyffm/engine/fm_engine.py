@@ -60,3 +60,6 @@ class FMEngine(BaseEngine):
 
     def predict(self, x):
         pass
+
+    def set_log_level(self, log_level: str):
+        logger.setLevel(log_level)

@@ -116,6 +116,9 @@ class FFMEngine(BaseEngine):
         logger.info(f'Training done, took {time.time() - full_start:.1f}s')
         return 0
 
+    def set_log_level(self, log_level: str):
+        logger.setLevel(log_level)
+
 
 def run_epoch(*args, **kwargs):
     """
