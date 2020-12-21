@@ -18,16 +18,22 @@ Basic example:
 ```python
 import pandas as pd
 from pyffm import PyFFM
+
 training_params = {'epochs': 2, 'reg_lambda': 0.002}
-pyffm = PyFFM(model="ffm", training_params=training_params)
+pyffm = PyFFM(model='ffm', training_params=training_params)
 
-file_path = 'path/to/csv/file'
-df_in = pd.read_csv(file_path)
-# Make sure your file has a label column, default name is 'click' but you can either rename it or pass in label
-df_in.rename(columns={'label': 'click'}, inplace=True)
+from pyffm.test.data import sample_df  # Small training data sample 
 
-pyffm.train(df_in)
-preds = pyffm.predict(df_in)
+# Make sure your file has a label column, default name is 'click' but you can either rename it or pass in label=label_column_name
+
+# Balance the dataset so we get some non-zero predictions (very small training sample)
+balanced_df = sample_df[sample_df['click'] == 1].append(sample_df[sample_df['click'] == 0].sample(n=1000)).sample(frac=1)
+
+train_data = balanced_df.sample(frac=0.9)
+predict_data = balanced_df.drop(train_data.index)
+
+pyffm.train(train_data)
+preds = pyffm.predict(predict_data.drop(columns='click'))
 
 
 ```
