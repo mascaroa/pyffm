@@ -18,7 +18,7 @@ class FFMModel(BaseModel):
                          use_linear=use_linear,
                          sigmoid=kwargs.get('sigmoid', False))
         self.num_latent = num_latent
-        self.grads = np.ones((num_fields, num_features, num_latent))
+        self.latent_grads = np.ones((num_fields, num_features, num_latent))
         np.random.seed(42)  # Not thread safe, but it's only used here
         self.latent_w = np.random.rand(num_fields, num_features, num_latent) * 1 / np.sqrt(num_latent)
 

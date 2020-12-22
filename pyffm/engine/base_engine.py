@@ -3,6 +3,8 @@ from abc import ABC, abstractmethod
 
 # TODO: list all these in docs more clearly
 class BaseEngine(ABC):
+    _save_features = ['bias', 'bias_grad', 'lin_terms', 'lin_grads', 'latent_w', 'latent_grads']
+
     def __init__(self, training_params):
         self.model = None
         self.epochs = training_params.pop('epochs', 10)
@@ -33,4 +35,8 @@ class BaseEngine(ABC):
 
     @abstractmethod
     def set_log_level(self, log_level):
+        pass
+
+    @abstractmethod
+    def save_model(self, model_path):
         pass

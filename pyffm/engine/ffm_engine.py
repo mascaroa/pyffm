@@ -85,7 +85,7 @@ class FFMEngine(BaseEngine):
             self.model.bias, self.model.bias_grad = run_epoch(x_train,
                                                               y_train,
                                                               self.model.latent_w,
-                                                              self.model.grads,
+                                                              self.model.latent_grads,
                                                               self.model.lin_terms,
                                                               self.model.lin_grads,
                                                               self.model.bias,
@@ -118,6 +118,16 @@ class FFMEngine(BaseEngine):
 
     def set_log_level(self, log_level: str):
         logger.setLevel(log_level)
+
+    def save_model(self, model_path):
+        kwargs = {feat: getattr(self.model, feat) for feat in self._save_features}
+        np.savez(model_path,
+                 kwargs)
+
+    def load_model(self, model_path):
+        saved_model = np.load(model_path)
+        for feat in self._save_features:
+            setattr(self.model, feat, saved_model[feat])
 
 
 def run_epoch(*args, **kwargs):
