@@ -1,3 +1,6 @@
+import os
+import json
+import datetime
 from typing import Union
 import numpy as np
 import pandas as pd
@@ -34,6 +37,8 @@ class PyFFM:
         self.feature_map = Map()
         self.field_map = Map()
 
+        self.model_dir = training_params.pop('model_dir', os.path.join(os.getcwd(), 'model'))
+
         self.set_log_level(kwargs.pop('log_level', 'INFO'))
 
         if len(kwargs):
@@ -54,7 +59,7 @@ class PyFFM:
 
             TODO: finish docs here
         """
-        assert self._check_inputs(x_train, y_train) == 0
+        # TODO: add online learning
         formatted_x_data, formatted_y_data = self._format_data(x_train,
                                                                y_train,
                                                                label_name=label_name)
@@ -75,7 +80,6 @@ class PyFFM:
 
     def predict(self, x: Union[str, list, pd.DataFrame],
                 label_name: str = 'click') -> np.array:
-        assert self._check_inputs(x) == 0
         logger.info('Formatting predict data')
         formatted_predict_data = self._format_data(x, train_or_predict='predict', label_name=label_name)
         return self.engine.predict(formatted_predict_data)
@@ -84,39 +88,35 @@ class PyFFM:
         # TODO: Load model from disk
         pass
 
-    def _check_inputs(self, x, y=None) -> int:
-        if type(x) in [list, pd.DataFrame, str]:
-            if y is not None and type(y) in [list, pd.DataFrame, str]:
-                return 0
-            return 0
-        raise TypeError(f'Input data must be [list, pd.DataFrame, str] not {type(x)}!')
+    def save_model(self, model_dir=None, overwrite=False):
+        if model_dir is None:
+            logger.info(f'No model path given, using default: {self.model_dir}')
+            model_dir = self.model_dir
+
+        model_filename = 'model.npz'
+        model_path = os.path.join(model_dir, model_filename)
+        if os.path.exists(model_path) and overwrite is False:  # Save backups like: '.YYYMMDD_mm_ss_feature_map.json'
+            backup_file_path = os.path.join(model_dir, f'.{datetime.datetime.now().strftime("%Y%m%d_%M_%S_")}', model_filename)
+            logger.info(f'Backing up model as {backup_file_path}')
+            os.rename(model_path, backup_file_path)
+        logger.info(f'Saving model to {model_path}')
+        self.engine.save_model(model_path)
+
+        for mapping_name in ['feature_map', 'field_map']:
+            map_path = os.path.join(model_dir, mapping_name, '.json')
+            if os.path.exists(map_path) and overwrite is False:  # Save backups like: '.YYYMMDD_mm_ss_feature_map.json'
+                backup_file_path = os.path.join(model_dir, f'.{datetime.datetime.now().strftime("%Y%m%d_%M_%S_")}', mapping_name, '.json')
+                logger.info(f'Backing up {mapping_name} as {backup_file_path}')
+                os.rename(map_path, backup_file_path)
+            logger.info(f'Saving {mapping_name} as {map_path}')
+            with open(map_path, 'w') as f:
+                json.dump(f, getattr(self, mapping_name))
 
     def _format_data(self,
                      x_data: Union[str, list, pd.DataFrame],
                      y_data: Union[str, list, pd.DataFrame, None] = None,
                      train_or_predict: str = 'train',
                      label_name='click') -> [np.array, np.array]:
-        if isinstance(x_data, str):
-            return self._format_file_data(x_data,
-                                          train_or_predict=train_or_predict)
-        elif isinstance(x_data, pd.DataFrame):
-            return self._format_dataframe(x_data,
-                                          y_df=y_data,
-                                          train_or_predict=train_or_predict,
-                                          label_name=label_name)
-        elif isinstance(x_data, list):
-            return self._format_list_data(x_data,
-                                          y_list=y_data,
-                                          train_or_predict=train_or_predict,
-                                          label_name=label_name)
-        raise TypeError(f'Data must be [str, list, pd.DataFrame] not {type(x_data)}')
-
-    def _format_dataframe(self,
-                          x_df: pd.DataFrame,
-                          y_df=None,
-                          train_or_predict='train',
-                          label_name='click') -> (np.array, np.array):
-        logger.debug('Formatting dataframe')
         if train_or_predict == 'train':
             field_map_func = self.field_map.add
             feature_map_func = self.feature_map.add
@@ -126,6 +126,35 @@ class PyFFM:
         else:
             raise NameError(f'train_or_predict must be "train" or "predict" not {train_or_predict}!')
 
+        if isinstance(x_data, str):
+            return self._format_file_data(x_data,
+                                          train_or_predict=train_or_predict,
+                                          field_map_func=field_map_func,
+                                          feature_map_func=feature_map_func)
+        elif isinstance(x_data, pd.DataFrame):
+            return self._format_dataframe(x_data,
+                                          y_df=y_data,
+                                          train_or_predict=train_or_predict,
+                                          label_name=label_name,
+                                          field_map_func=field_map_func,
+                                          feature_map_func=feature_map_func)
+        elif isinstance(x_data, list):
+            return self._format_list_data(x_data,
+                                          y_list=y_data,
+                                          train_or_predict=train_or_predict,
+                                          label_name=label_name,
+                                          field_map_func=field_map_func,
+                                          feature_map_func=feature_map_func)
+        raise TypeError(f'Data must be [str, list, pd.DataFrame] not {type(x_data)}')
+
+    def _format_dataframe(self,
+                          x_df: pd.DataFrame,
+                          y_df=None,
+                          train_or_predict='train',
+                          label_name='click',
+                          field_map_func=None,
+                          feature_map_func=None) -> (np.array, np.array):
+        logger.info('Formatting dataframe')
         if label_name in x_df.columns:
             assert y_df is None, f'Label column ({label_name}) found in dataframe but y data was also passed!'
             y_data = x_df[label_name].values
@@ -158,36 +187,22 @@ class PyFFM:
                           x_list: list,
                           y_list: list = None,
                           train_or_predict: str = 'train',
-                          label_name='click') -> (np.array, np.array):
-        logger.debug('Formatting list data')
-        if train_or_predict == 'train':
-            field_map_func = self.field_map.add
-            feature_map_func = self.feature_map.add
-        elif train_or_predict == 'predict':
-            field_map_func = self.field_map.get
-            feature_map_func = self.feature_map.get
-        else:
-            raise NameError(f'train_or_predict must be "train" or "predict" not {train_or_predict}!')
+                          label_name='click',
+                          field_map_func=None,
+                          feature_map_func=None) -> (np.array, np.array):
+        assert train_or_predict in ['train', 'predcit'], NameError(f'train_or_predict must be "train" or "predict" not {train_or_predict}!')
 
         return x_list, y_list
 
     def _format_file_data(self,
                           filename: str,
-                          train_or_predict: str = 'train') -> (np.array, np.array):
+                          train_or_predict: str = 'train',
+                          field_map_func=None,
+                          feature_map_func=None) -> (np.array, np.array):
         """
             Load preformatted (LibFFM) files for training
         """
         # TODO: add file formatting for FM
-        logger.debug('Loading file data')
-        if train_or_predict == 'train':
-            field_map_func = self.field_map.add
-            feature_map_func = self.feature_map.add
-        elif train_or_predict == 'predict':
-            field_map_func = self.field_map.get
-            feature_map_func = self.feature_map.get
-        else:
-            raise NameError(f'train_or_predict must be "train" or "predict" not {train_or_predict}!')
-
         x_data, y_data = [], []
         with open(filename, 'r') as f:
             while True:
