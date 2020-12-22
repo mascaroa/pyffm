@@ -1,5 +1,5 @@
 import os
-import json
+import pickle
 import datetime
 from typing import Union
 import numpy as np
@@ -37,7 +37,8 @@ class PyFFM:
         self.feature_map = Map()
         self.field_map = Map()
 
-        self.model_dir = training_params.pop('model_dir', os.path.join(os.getcwd(), 'model'))
+        self.model_dir = self.io_params.get('model_dir', os.path.join(os.getcwd(), 'model'))
+        self.model_filename = self.io_params.get('model_filename', 'model.npz')
 
         self.set_log_level(kwargs.pop('log_level', 'INFO'))
 
@@ -84,33 +85,50 @@ class PyFFM:
         formatted_predict_data = self._format_data(x, train_or_predict='predict', label_name=label_name)
         return self.engine.predict(formatted_predict_data)
 
-    def load_model(self, model_path):
-        # TODO: Load model from disk
-        pass
+    def load_model(self, model_dir=None):
+        if model_dir is None:
+            logger.info(f'No model path given, using default: {self.model_dir}')
+            model_dir = self.model_dir
+        for mapping_name in ['feature_map', 'field_map']:
+            map_path = os.path.join(model_dir, mapping_name + '.pkl')
+            if not os.path.exists(map_path):
+                logger.error(f'No {mapping_name} found at {map_path}!')
+                return
+            with open(map_path, 'rb') as f:
+                setattr(self, mapping_name, pickle.load(f))
 
-    def save_model(self, model_dir=None, overwrite=False):
+        model_path = os.path.join(model_dir, self.model_filename)
+        if not os.path.exists(model_path):
+            logger.error(f'No model found at {model_path}!')
+            return
+        self.engine.load_model(model_path)
+
+    def save_model(self, model_dir=None, overwrite=True):
         if model_dir is None:
             logger.info(f'No model path given, using default: {self.model_dir}')
             model_dir = self.model_dir
 
-        model_filename = 'model.npz'
-        model_path = os.path.join(model_dir, model_filename)
-        if os.path.exists(model_path) and overwrite is False:  # Save backups like: '.YYYMMDD_mm_ss_feature_map.json'
-            backup_file_path = os.path.join(model_dir, f'.{datetime.datetime.now().strftime("%Y%m%d_%M_%S_")}', model_filename)
+        if not os.path.exists(model_dir):
+            logger.info(f'Creating model directory {model_dir}')
+            os.makedirs(model_dir)
+
+        model_path = os.path.join(model_dir, self.model_filename)
+        if os.path.exists(model_path) and overwrite is False:  # Save backups like: '.YYYMMDD_mm_ss_model.npz'
+            backup_file_path = os.path.join(model_dir, f'.{datetime.datetime.now().strftime("%Y%m%d_%M_%S_")}' + self.model_filename)
             logger.info(f'Backing up model as {backup_file_path}')
             os.rename(model_path, backup_file_path)
         logger.info(f'Saving model to {model_path}')
         self.engine.save_model(model_path)
 
         for mapping_name in ['feature_map', 'field_map']:
-            map_path = os.path.join(model_dir, mapping_name, '.json')
-            if os.path.exists(map_path) and overwrite is False:  # Save backups like: '.YYYMMDD_mm_ss_feature_map.json'
-                backup_file_path = os.path.join(model_dir, f'.{datetime.datetime.now().strftime("%Y%m%d_%M_%S_")}', mapping_name, '.json')
+            map_path = os.path.join(model_dir, mapping_name + '.pkl')
+            if os.path.exists(map_path) and overwrite is False:  # Save backups like: '.YYYMMDD_mm_ss_feature_map.pkl'
+                backup_file_path = os.path.join(model_dir, f'.{datetime.datetime.now().strftime("%Y%m%d_%M_%S_")}' + mapping_name + '.pkl')
                 logger.info(f'Backing up {mapping_name} as {backup_file_path}')
                 os.rename(map_path, backup_file_path)
             logger.info(f'Saving {mapping_name} as {map_path}')
-            with open(map_path, 'w') as f:
-                json.dump(f, getattr(self, mapping_name))
+            with open(map_path, 'wb') as f:
+                pickle.dump(getattr(self, mapping_name), f)
 
     def _format_data(self,
                      x_data: Union[str, list, pd.DataFrame],

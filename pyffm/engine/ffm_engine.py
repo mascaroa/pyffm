@@ -121,10 +121,11 @@ class FFMEngine(BaseEngine):
 
     def save_model(self, model_path):
         kwargs = {feat: getattr(self.model, feat) for feat in self._save_features}
-        np.savez(model_path,
-                 kwargs)
+        np.savez(model_path, **kwargs)
 
     def load_model(self, model_path):
+        if self.model is None:
+            self.create_model(num_features=0, num_fields=0, **self._training_params)
         saved_model = np.load(model_path)
         for feat in self._save_features:
             setattr(self.model, feat, saved_model[feat])
