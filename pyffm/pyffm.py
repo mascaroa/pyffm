@@ -50,15 +50,24 @@ class PyFFM:
               y_train: Union[str, list, pd.DataFrame, None] = None,
               label_name: str = 'click') -> None:
         """
-
             Train data must be a str (path to libffm file), a list of dictionaries, or a dataframe and must contain
             a lobel column (default 'click'), e.g.:
+
+            list:
+
             [{'click': 1, 'field1': 'feature1', 'field2', 0.83, ...},              <- 1st row
             {'click': 0, 'field2': 'feature_whatever', 'field17': True, ...}]     <- 2nd row ...
 
-            OR
+            DataFrame:
 
-            TODO: finish docs here
+               click    field1    field2  ...  fieldN
+                0       163825     2112          3.57
+                1       116178     3104          3.14
+                ...
+
+            filepath: (str)
+
+            libffm formatted file (see pyffm/test/data/bigdata.tr.txt)
         """
         # TODO: add online learning
         formatted_x_data, formatted_y_data = self._format_data(x_train,
