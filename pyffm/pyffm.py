@@ -162,7 +162,8 @@ class PyFFM:
             return _format_file_data(x_data,
                                      train_or_predict=train_or_predict,
                                      field_map_func=field_map_func,
-                                     feature_map_func=feature_map_func)
+                                     feature_map_func=feature_map_func,
+                                     problem=self.problem)
         elif isinstance(x_data, pd.DataFrame):
             return _format_dataframe(x_data,
                                      y_df=y_data,
@@ -177,7 +178,8 @@ class PyFFM:
                                      train_or_predict=train_or_predict,
                                      label_name=label_name,
                                      field_map_func=field_map_func,
-                                     feature_map_func=feature_map_func)
+                                     feature_map_func=feature_map_func,
+                                     problem=self.problem)
         raise TypeError(f'Data must be [str, list, pd.DataFrame] not {type(x_data)}')
 
     def set_log_level(self, log_level: str):
@@ -241,7 +243,8 @@ def _format_list_data(x_list: list,
                       train_or_predict: str = 'train',
                       label_name='click',
                       field_map_func=None,
-                      feature_map_func=None) -> (np.array, np.array):
+                      feature_map_func=None,
+                      problem: str = None) -> (np.array, np.array):
     logger.info('Formatting list data')
     y_data = np.zeros(len(x_list))
     if train_or_predict == 'train' and y_list is None:
@@ -256,6 +259,8 @@ def _format_list_data(x_list: list,
             else:
                 x_data[i, j, :] = np.array([int(field_map_func(key)), int(feature_map_func(val)), 1])
     if train_or_predict == 'train':
+        if y_data.min() == 0 and y_data.max() == 1 and problem == 'classification':
+            y_data = -1 + y_data * 2
         return x_data, y_data
     return x_data
 
