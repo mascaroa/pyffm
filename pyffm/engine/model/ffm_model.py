@@ -16,7 +16,8 @@ class FFMModel(BaseModel):
         super().__init__(num_features=num_features,
                          reg_lambda=reg_lambda,
                          use_linear=use_linear,
-                         sigmoid=kwargs.get('sigmoid', False))
+                         sigmoid=kwargs.get('sigmoid', False),
+                         regression=kwargs.get('regression', False))
         self.num_latent = num_latent
         self.latent_grads = np.ones((num_fields, num_features, num_latent))
         np.random.seed(42)  # Not thread safe, but it's only used here
@@ -24,6 +25,8 @@ class FFMModel(BaseModel):
 
     def predict(self, x):
         if self.sigmoid:
+            if self.regression:
+                return self._phi(x)
             return logistic(self._phi(x))
         return 1 if self._phi(x) > 0 else 0
 

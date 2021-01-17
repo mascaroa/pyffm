@@ -8,8 +8,10 @@ class BaseModel(ABC):
                  num_features,
                  reg_lambda,
                  use_linear,
-                 sigmoid):
+                 sigmoid,
+                 regression):
         self.sigmoid = sigmoid
+        self.regression = regression
 
         self.reg_lambda = reg_lambda
 

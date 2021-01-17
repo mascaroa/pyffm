@@ -34,6 +34,8 @@ class PyFFM:
         if problem.lower() not in ['classification', 'regression']:
             raise ValueError(f'Problem must be classification or regression not {problem}')
         self.problem = problem.lower()
+        if self.problem == 'regression':
+            self.training_params['regression'] = True
 
         if self.model not in EngineFactory:
             raise NameError(f'Model {self.model.lower()} not found! Must be in {EngineFactory}')
@@ -245,6 +247,7 @@ def _format_list_data(x_list: list,
                       field_map_func=None,
                       feature_map_func=None,
                       problem: str = None) -> (np.array, np.array):
+    x_list = x_list.copy()
     logger.info('Formatting list data')
     y_data = np.zeros(len(x_list))
     if train_or_predict == 'train' and y_list is None:

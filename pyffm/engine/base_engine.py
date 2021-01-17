@@ -17,6 +17,7 @@ class BaseEngine(ABC):
         self._training_params['reg_lambda'] = training_params.get('reg_lambda', 0.002)
         self._training_params['num_latent'] = training_params.get('num_latent', 4)
         self._training_params['sigmoid'] = training_params.get('sigmoid', False)
+        self._training_params['regression'] = training_params.get('regression', False)
 
         self.best_loss = None
         self.best_loss_epoch = None
