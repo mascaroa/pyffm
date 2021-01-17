@@ -93,7 +93,8 @@ class FFMEngine(BaseEngine):
                                                               self.model.num_latent,
                                                               self.model.reg_lambda,
                                                               self.learn_rate,
-                                                              norms)
+                                                              norms,
+                                                              regression=self._training_params['regression'])
             logger.info(f'Full train done, took {time.time() - start_time:.1f}s')
 
             # If test data entered, calc logloss
@@ -151,14 +152,18 @@ def run_epoch(*args, **kwargs):
                    num_latent,
                    reg_lambda,
                    learn_rate,
-                   norms) -> [int, int]:
+                   norms,
+                   regression=False) -> [int, int]:
         """
             Run one full training epoch while updating model params
         """
         g1 = np.zeros(num_latent)
         g2 = np.zeros(num_latent)
         for i in np.arange(x_train.shape[0]):
-            kappa = np.divide(-y_train[i], (1 + np.exp(y_train[i] * calc_phi(x_train[i], bias, lin_terms, latent_w, norms[i]))))
+            if regression:
+                kappa = -(y_train[i] - calc_phi(x_train[i], bias, lin_terms, latent_w, norms[i]))
+            else:
+                kappa = np.divide(-y_train[i], (1 + np.exp(y_train[i] * calc_phi(x_train[i], bias, lin_terms, latent_w, norms[i]))))
             for j_1 in prange_func(x_train.shape[1]):
                 field1, feat1, val1 = x_train[i, j_1]
 
