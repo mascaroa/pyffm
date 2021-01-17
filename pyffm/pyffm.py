@@ -5,9 +5,9 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
-from engine import EngineFactory
-from engine.base_engine import BaseEngine
-from util import Map
+from .engine import EngineFactory
+from .engine.base_engine import BaseEngine
+from .util import Map
 
 import logging
 
@@ -23,12 +23,17 @@ class PyFFM:
                  model=None,
                  training_params=None,
                  io_params=None,
+                 problem='classification',
                  **kwargs):
 
         self.training_params = {} if training_params is None else training_params
         self.io_params = {} if io_params is None else io_params
 
         self.model = 'ffm' if model is None else model
+
+        if problem.lower() not in ['classification', 'regression']:
+            raise ValueError(f'Problem must be classification or regression not {problem}')
+        self.problem = problem.lower()
 
         if self.model not in EngineFactory:
             raise NameError(f'Model {self.model.lower()} not found! Must be in {EngineFactory}')
@@ -164,7 +169,8 @@ class PyFFM:
                                      train_or_predict=train_or_predict,
                                      label_name=label_name,
                                      field_map_func=field_map_func,
-                                     feature_map_func=feature_map_func)
+                                     feature_map_func=feature_map_func,
+                                     problem=self.problem)
         elif isinstance(x_data, list):
             return _format_list_data(x_data,
                                      y_list=y_data,
@@ -198,7 +204,8 @@ def _format_dataframe(x_df: pd.DataFrame,
                       train_or_predict='train',
                       label_name='click',
                       field_map_func=None,
-                      feature_map_func=None) -> (np.array, np.array):
+                      feature_map_func=None,
+                      problem: str = None) -> (np.array, np.array):
     logger.info('Formatting dataframe')
     if label_name in x_df.columns:
         assert y_df is None, f'Label column ({label_name}) found in dataframe but y data was also passed!'
@@ -223,7 +230,7 @@ def _format_dataframe(x_df: pd.DataFrame,
             x_arr[i, j, :] = [field_map_func(fields[j]), feature_map_func(x_data[i, j]), 1]
 
     if y_data is not None and train_or_predict == 'train':
-        if y_data.min() == 0 and y_data.max() == 1:
+        if y_data.min() == 0 and y_data.max() == 1 and problem == 'classification':
             y_data = -1 + y_data * 2
         return x_arr, y_data
     return x_arr
@@ -256,7 +263,8 @@ def _format_list_data(x_list: list,
 def _format_file_data(filename: str,
                       train_or_predict: str = 'train',
                       field_map_func=None,
-                      feature_map_func=None) -> (np.array, np.array):
+                      feature_map_func=None,
+                      problem: str = None) -> (np.array, np.array):
     """
         Load preformatted (LibFFM) files for training
     """
@@ -288,7 +296,7 @@ def _format_file_data(filename: str,
     x_data = np.concatenate(np.concatenate(x_data)).reshape(num_rows, num_cols, 3)
     if y_data is not None and train_or_predict == 'train':
         y_data = np.concatenate(y_data)
-        if y_data.min() == 0 and y_data.max() == 1:
+        if y_data.min() == 0 and y_data.max() == 1 and problem == 'classification':
             y_data = -1 + y_data * 2
         return x_data, y_data
     return x_data
