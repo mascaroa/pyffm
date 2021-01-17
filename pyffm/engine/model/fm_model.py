@@ -3,7 +3,7 @@ from typing import Tuple, List
 import numpy as np
 
 from .base_model import BaseModel
-from util import logistic
+from pyffm.util import logistic
 
 
 class FMModel(BaseModel):

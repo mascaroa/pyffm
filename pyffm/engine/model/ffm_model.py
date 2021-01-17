@@ -2,7 +2,7 @@ import numpy as np
 from numba import njit, numba as nb
 
 from .base_model import BaseModel
-from util import logistic
+from pyffm.util import logistic
 
 
 class FFMModel(BaseModel):

@@ -4,10 +4,11 @@
 |__\__/|   |   |    |
 |   /       
 ```
-
 *** early stage testing! ***
 
 A python implementation of Factorization Machines / Field-aware Factorization Machines with a simple interface.
+
+Supports classification and regression.
 
 Installation:
 ```shell script
