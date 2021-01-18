@@ -94,18 +94,19 @@ class FFMEngine(BaseEngine):
                                                               self.model.reg_lambda,
                                                               self.learn_rate,
                                                               norms,
-                                                              regression=self._training_params['regression'])
+                                                              regression=self._training_params['regression'],
+                                                              use_linear=self.model.use_linear)
             logger.info(f'Full train done, took {time.time() - start_time:.1f}s')
 
             # If test data entered, calc logloss
             logger.info('Calculating logloss')
             start_time = time.time()
             if x_test is not None:
-                logloss = calc_logloss(x_test,
-                                       y_test,
-                                       self.model.bias,
-                                       self.model.lin_terms,
-                                       self.model.latent_w)
+                logloss = logloss_func[self.model.regression](x_test,
+                                                              y_test,
+                                                              self.model.bias,
+                                                              self.model.lin_terms,
+                                                              self.model.latent_w)
                 logger.info(f'Logloss: {logloss}, \nTook {time.time() - start_time:.1f}s')
                 if self.best_loss is None or logloss < self.best_loss:
                     self.best_loss = logloss
@@ -153,7 +154,8 @@ def run_epoch(*args, **kwargs):
                    reg_lambda,
                    learn_rate,
                    norms,
-                   regression=False) -> [int, int]:
+                   regression=False,
+                   use_linear=True) -> [int, int]:
         """
             Run one full training epoch while updating model params
         """
@@ -188,7 +190,8 @@ def run_epoch(*args, **kwargs):
                     latent_w[int(field1), int(feat2)] -= learn_rate * g1 / np.sqrt(w_grads[int(field1), int(feat2)])
                     latent_w[int(field2), int(feat1)] -= learn_rate * g2 / np.sqrt(w_grads[int(field2), int(feat1)])
             bias_grad += kappa * kappa
-            bias -= learn_rate * kappa / np.sqrt(bias_grad)
+            if use_linear:
+                bias -= learn_rate * kappa / np.sqrt(bias_grad)
         return bias, bias_grad
 
     return full_train(*args, **kwargs)
@@ -206,3 +209,22 @@ def calc_logloss(x_test,
         logloss += np.log(1 + np.exp(-y_test[i] * calc_phi(x_test[i], bias, lin_terms, latent_w, norm)))
     logloss = logloss / len(x_test)
     return logloss
+
+
+@njit(parallel=True, cache=True)
+def calc_logloss_regression(x_test,
+                            y_test,
+                            bias,
+                            lin_terms,
+                            latent_w):
+    logloss = 0
+    for i in nb.prange(len(x_test)):
+        norm = 1 / x_test[i].sum(axis=0)[2]
+        err = y_test[i] - calc_phi(x_test[i], bias, lin_terms, latent_w, norm)
+        logloss += err * err
+    logloss = np.sqrt(logloss / len(x_test))
+    return logloss
+
+
+logloss_func = {True: calc_logloss_regression,
+                False: calc_logloss}
