@@ -257,10 +257,14 @@ def _format_list_data(x_list: list,
     x_data = np.zeros((len(x_list), max([len(row) for row in x_list]), 3))
     for i, row in enumerate(x_list):
         for j, (key, val) in enumerate(row.items()):
-            if isinstance(val, float):
-                x_data[i, j, :] = np.array([int(field_map_func(key)), int(feature_map_func(key)), val])
-            else:
-                x_data[i, j, :] = np.array([int(field_map_func(key)), int(feature_map_func(val)), 1])
+            try:
+                if isinstance(val, float):
+                    x_data[i, j, :] = np.array([int(field_map_func(key)), int(feature_map_func(key)), val])
+                else:
+                    x_data[i, j, :] = np.array([int(field_map_func(key)), int(feature_map_func(val)), 1])
+            except TypeError as e:
+                logger.debug(f'Feature not found {key}/{val}')
+                continue
     if train_or_predict == 'train':
         if y_data.min() == 0 and y_data.max() == 1 and problem == 'classification':
             y_data = -1 + y_data * 2
