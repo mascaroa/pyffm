@@ -19,7 +19,7 @@ class BaseModel(ABC):
         self.lin_terms = np.zeros(num_features) if use_linear else None
         self.lin_grads = np.ones(num_features) if use_linear else None
 
-        self.bias = 0 if use_linear else None
+        self.bias = 0
         self.bias_grad = 1
 
     @abstractmethod
