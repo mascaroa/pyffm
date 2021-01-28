@@ -59,7 +59,17 @@ class FMEngine(BaseEngine):
         return 0
 
     def predict(self, x):
-        pass
+        pass  # TODO: finish this...
 
     def set_log_level(self, log_level: str):
         logger.setLevel(log_level)
+
+    def save_model(self, model_path):
+        pass
+
+    def load_model(self, model_path):
+        if self.model is None:
+            self.create_model(num_features=0, num_fields=0, **self._training_params)
+        saved_model = np.load(model_path)
+        for feat in self._save_features:
+            setattr(self.model, feat, saved_model[feat])
