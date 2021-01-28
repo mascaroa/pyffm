@@ -7,6 +7,8 @@
 
 A python implementation of Factorization Machines / Field-aware Factorization Machines with a simple interface.
 
+** FFM fully functioning/tested, FM still untested (and not jitted) **
+
 Supports classification and regression.
 
 Installation:
