@@ -7,18 +7,19 @@ from pyffm.util import logistic
 
 
 class FMModel(BaseModel):
-    def __init__(self,
-                 num_latent,
-                 num_features,
-                 reg_lambda,
-                 use_linear=False,
-                 **kwargs):
-        super().__init__(num_features=num_features,
-                         reg_lambda=reg_lambda,
-                         use_linear=use_linear,
-                         sigmoid=kwargs.get('sigmoid', False),
-                         regression=kwargs.get('regression', False))
-        self.latent_w = np.random.rand(num_features, num_latent) * 1 / np.sqrt(num_latent)
+    def __init__(
+        self, num_latent, num_features, reg_lambda, use_linear=False, **kwargs
+    ):
+        super().__init__(
+            num_features=num_features,
+            reg_lambda=reg_lambda,
+            use_linear=use_linear,
+            sigmoid=kwargs.get("sigmoid", False),
+            regression=kwargs.get("regression", False),
+        )
+        self.latent_w = (
+            np.random.rand(num_features, num_latent) * 1 / np.sqrt(num_latent)
+        )
         self.grads = np.ones((num_features, num_latent))
 
     @property

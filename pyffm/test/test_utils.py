@@ -12,7 +12,10 @@ class TestMap(unittest.TestCase):
         map_size_to_test = 1000
         all_letters = string.ascii_uppercase + string.ascii_lowercase
         counter = 0
-        for char in ''.join(all_letters[np.random.choice(len(all_letters))] for _ in range(map_size_to_test)):
+        for char in "".join(
+            all_letters[np.random.choice(len(all_letters))]
+            for _ in range(map_size_to_test)
+        ):
             if char not in map1:
                 counter += 1
             map_index = map1.add(char)

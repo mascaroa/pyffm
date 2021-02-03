@@ -3,8 +3,7 @@ from .fm_engine import FMEngine
 
 
 class MetaFactory(type):
-    ENGINE_DICT = {'ffm': FFMEngine,
-                   'fm': FMEngine}
+    ENGINE_DICT = {"ffm": FFMEngine, "fm": FMEngine}
 
     def __getitem__(cls, item):
         return cls.ENGINE_DICT[item.lower()]

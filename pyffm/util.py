@@ -9,8 +9,8 @@ def logistic(x):
 
 class Map:
     """
-        Inspired by Kevin Stokely's work:
-        https://github.com/kcstokely/kctools/blob/master/kctools/classes/map.py
+    Inspired by Kevin Stokely's work:
+    https://github.com/kcstokely/kctools/blob/master/kctools/classes/map.py
     """
 
     def __init__(self):
@@ -46,7 +46,7 @@ class Map:
         return item in self._map_dict
 
     def __str__(self):
-        return f'{self.__class__.__name__}[{self._map_dict}]'
+        return f"{self.__class__.__name__}[{self._map_dict}]"
 
     def __len__(self):
         return len(self._map_dict)
