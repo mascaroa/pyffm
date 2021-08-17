@@ -275,13 +275,13 @@ def _format_dataframe(
         for j in range(num_cols):
             if "float" in str(dtypes[j]):
                 x_arr[i, j, :] = [
-                    field_map_func(fields[j]),
+                    field_map_func(fields[j].split('.')[0]),
                     feature_map_func(x_data[i, j]),
                     x_data[i, j],
                 ]
                 continue
             x_arr[i, j, :] = [
-                field_map_func(fields[j]),
+                field_map_func(fields[j].split('.')[0]),
                 feature_map_func(x_data[i, j]),
                 1,
             ]
@@ -315,11 +315,11 @@ def _format_list_data(
             try:
                 if isinstance(val, float):
                     x_data[i, j, :] = np.array(
-                        [int(field_map_func(key)), int(feature_map_func(key)), val]
+                        [int(field_map_func(key.split('.')[0])), int(feature_map_func(key.split('.')[0])), val]
                     )
                 else:
                     x_data[i, j, :] = np.array(
-                        [int(field_map_func(key)), int(feature_map_func(val)), 1]
+                        [int(field_map_func(key.split('.')[0])), int(feature_map_func(val)), 1]
                     )
             except TypeError as e:
                 logger.debug(f"Feature not found {key}/{val}")

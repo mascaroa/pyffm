@@ -7,16 +7,43 @@
 
 A python implementation of Factorization Machines / Field-aware Factorization Machines with a simple interface.
 
-** FFM fully functioning/tested, FM still untested (and not jitted) **
+(FFM fully functioning/tested, FM still not fully tested)
 
 Supports classification and regression.
 
-Installation:
+#### Project Structure
+```
+pyffm
+ ├── engine
+ │   ├── model
+ │   │   ├── base_model.py
+ │   │   ├── ffm_model.py
+ │   │   └── fm_model.py
+ │   ├── base_engine.py
+ │   ├── ffm_engine.py
+ │   └── fm_engine.py
+ ├── test
+ │   ├── data
+ │   │   ├── bigdata.te.txt
+ │   │   ├── bigdata.tr.txt
+ │   │   └── small_sample_train.csv
+ │   ├── test_ctrengine.py
+ │   ├── test_pyffm.py
+ │   └── test_utils.py
+ ├── pyffm.py
+ └── util.py
+LICENSE
+README.md
+setup.py
+```
+
+
+#### Installation:
 ```shell script
 pip install pyffm
 ``` 
 
-Basic example:
+#### Basic example:
 ```python
 import pandas as pd
 from pyffm import PyFFM
