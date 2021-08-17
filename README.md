@@ -16,20 +16,25 @@ Supports classification and regression.
 pyffm
  ├── engine
  │   ├── model
+ │   │   ├── __init__.py
  │   │   ├── base_model.py
  │   │   ├── ffm_model.py
  │   │   └── fm_model.py
+ │   ├── __init__.py
  │   ├── base_engine.py
  │   ├── ffm_engine.py
  │   └── fm_engine.py
  ├── test
  │   ├── data
+ │   │   ├── __init__.py
  │   │   ├── bigdata.te.txt
  │   │   ├── bigdata.tr.txt
  │   │   └── small_sample_train.csv
+ │   ├── __init__.py
  │   ├── test_ctrengine.py
  │   ├── test_pyffm.py
  │   └── test_utils.py
+ ├── __init__.py
  ├── pyffm.py
  └── util.py
 LICENSE
