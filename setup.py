@@ -14,5 +14,5 @@ setuptools.setup(
     license="MIT",
     url="https://github.com/mascaroa/pyffm",
     packages=setuptools.find_packages(),
-    install_requires=["numpy>=1.16", "pandas>=0.24", "numba>=0.49.1"],
+    install_requires=["numpy<=1.18", "pandas>=0.24", "numba>=0.49.1"],
 )
