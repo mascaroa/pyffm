@@ -1,12 +1,14 @@
 import os
 import pickle
 import datetime
-from typing import Union
+from typing import Union, Dict, Any
 import numpy as np
 import pandas as pd
 
+from .engine.model.base_model import BaseModel
 from .engine import EngineFactory
 from .engine.base_engine import BaseEngine
+from .params import ModelType, ProblemType, TrainingParams, IOParams
 from .util import Map
 
 import logging
@@ -21,21 +23,21 @@ class PyFFM:
 
     def __init__(
         self,
-        model=None,
-        training_params=None,
-        io_params=None,
-        problem="classification",
+        model: ModelType,
+        training_params: Dict[TrainingParams, Any] = None,
+        io_params: Dict[IOParams, Any] = None,
+        problem: ProblemType = ProblemType.CLASSIFICATION,
         **kwargs,
     ):
 
         self.training_params = {} if training_params is None else training_params
         self.io_params = {} if io_params is None else io_params
 
-        self.model = "ffm" if model is None else model
+        self.model = ModelType.FFM if model is None else model
 
-        if problem.lower() not in ["classification", "regression"]:
+        if problem not in ProblemType.__l:
             raise ValueError(
-                f"Problem must be classification or regression not {problem}"
+                f"Problem must be {ProblemType} not {problem}"
             )
         self.problem = problem.lower()
         if self.problem == "regression":
@@ -51,9 +53,9 @@ class PyFFM:
         self.field_map = Map()
 
         self.model_dir = self.io_params.get(
-            "model_dir", os.path.join(os.getcwd(), "model")
+            IOParams.MODEL_DIR, os.path.join(os.getcwd(), "model")
         )
-        self.model_filename = self.io_params.get("model_filename", "model.npz")
+        self.model_filename = self.io_params.get(IOParams.MODEL_FILENAME, "model.npz")
 
         self.set_log_level(kwargs.pop("log_level", "INFO"))
 
@@ -91,7 +93,7 @@ class PyFFM:
             x_train, y_train, label_name=label_name
         )
         if not self.engine.train_quiet:
-            split_frac = self.training_params.get("split_frac", 0.1)
+            split_frac = self.training_params.get(TrainingParams.SPLIT_FRAC, 0.1)
             x_train, y_train, x_test, y_test = _train_test_split(
                 formatted_x_data, formatted_y_data, split_frac
             )

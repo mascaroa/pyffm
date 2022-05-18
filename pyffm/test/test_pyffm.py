@@ -4,18 +4,22 @@ import numpy as np
 import pandas as pd
 
 from pyffm import PyFFM
+from pyffm.params import ModelType, TrainingParams
 
 
 class TestCTREngine(unittest.TestCase):
     def test_train_from_file(self):
         training_params = {
-            "epoch": 10,
-            "reg_lambda": 0.002,
-            "sigmoid": True,
-            "parallel": False,
-            "early_stop": False,
+            TrainingParams.EPOCH: 10,
+            TrainingParams.REG_LAMBDA: 0.002,
+            TrainingParams.SIGMOID: True,
+            TrainingParams.PARALLEL: False,
+            TrainingParams.EARLY_STOP: False,
         }
-        pyffm = PyFFM(model="ffm", training_params=training_params)
+        pyffm = PyFFM(
+            model=ModelType.FFM,
+            training_params=training_params
+        )
 
         import os
 
