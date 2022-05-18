@@ -54,7 +54,7 @@ import pandas as pd
 from pyffm import PyFFM
 
 training_params = {'epochs': 2, 'reg_lambda': 0.002}
-pyffm = PyFFM(model='ffm', training_params=training_params)
+model = PyFFM(model='ffm', training_params=training_params)
 
 from pyffm.test.data import sample_df  # Small training data sample 
 
@@ -66,8 +66,8 @@ balanced_df = sample_df[sample_df['click'] == 1].append(sample_df[sample_df['cli
 train_data = balanced_df.sample(frac=0.9)
 predict_data = balanced_df.drop(train_data.index)
 
-pyffm.train(train_data)
-preds = pyffm.predict(predict_data.drop(columns='click'))
+model.train(train_data)
+preds = model.predict(predict_data.drop(columns='click'))
 
 
 ```
