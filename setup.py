@@ -5,7 +5,7 @@ README = (pathlib.Path(__file__).parent / "README.md").read_text()
 
 setuptools.setup(
     name="pyFFM",
-    version="0.0.6",
+    version="0.0.7",
     author="Aaron Mascaro",
     author_email="mascaroa1@gmail.com",
     description="Python implementation of Factorization Machines (+ Field Aware)",
