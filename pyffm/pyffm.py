@@ -26,26 +26,29 @@ class PyFFM:
         model: ModelType,
         training_params: Dict[TrainingParams, Any] = None,
         io_params: Dict[IOParams, Any] = None,
-        problem: ProblemType = ProblemType.CLASSIFICATION,
+        problem: ProblemType = None,
         **kwargs,
     ):
 
         self.training_params = {} if training_params is None else training_params
         self.io_params = {} if io_params is None else io_params
 
-        self.model = ModelType.FFM if model is None else model
+        if model not in ModelType:
+            raise AttributeError(f"Model must be in {ModelType.__members__}")
+        self.model = model if model is not None else ModelType.FFM
 
         if problem not in ProblemType.__l:
             raise ValueError(
                 f"Problem must be {ProblemType} not {problem}"
             )
-        self.problem = problem.lower()
-        if self.problem == "regression":
-            self.training_params["regression"] = True
+
+        if problem not in ProblemType:
+            raise AttributeError(f"Problem must be in {ProblemType.__members__}")
+        self.problem = problem if problem is not None else ProblemType.CLASSIFICATION
 
         if self.model not in EngineFactory:
             raise NameError(
-                f"Model {self.model.lower()} not found! Must be in {EngineFactory}"
+                f"Model {self.model} not found! Must be in {EngineFactory}"
             )
         self.engine: BaseEngine
         self.engine = EngineFactory[self.model](training_params=self.training_params)
